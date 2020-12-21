@@ -10,7 +10,6 @@ RUN groupadd -r marlabs && useradd -r -s /bin/false -g marlabs marlabs
 
 RUN mkdir /home/mAdvisor/
 WORKDIR /home/mAdvisor/
-RUN mkdir madviosor-api-temp
 
 #ADD requirements.tgz /home/mAdvisor/
 ADD requirements /home/mAdvisor
