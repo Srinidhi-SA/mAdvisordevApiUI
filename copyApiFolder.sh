@@ -1,4 +1,4 @@
-rsync -r * API_DOCKER/code/mAdvisor-api/ --exclude API_DOCKER --exclude copyApiFolder.sh --exclude buildspec.yml --exclude api_image_generate.sh --exclude NGINX_DOCKER
+rsync -r * API_DOCKER/code/mAdvisor-api/ --exclude API_DOCKER --exclude copyApiFolder.sh --exclude buildspec.yml --exclude hadoop_docker --exclude NGINX_DOCKER --exclude copyHadoopImage.sh
 cp -r static NGINX_DOCKER/static/
 cd API_DOCKER
 docker build -t api .
