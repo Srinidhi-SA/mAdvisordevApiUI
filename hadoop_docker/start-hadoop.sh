@@ -1,8 +1,12 @@
 #!/bin/bash
 /etc/init.d/ssh start
+echo "Run namenode"
 $HADOOP_HOME/bin/hdfs namenode -format
+echo "Run startnode"
 $HADOOP_HOME/sbin/start-dfs.sh
+echo "Run StartManager"
 $HADOOP_HOME/sbin/start-yarn.sh
+echo "Run ResourceManager"
 $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
 
 #Permissions for marlabs user
