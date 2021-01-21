@@ -77,4 +77,4 @@ RUN chmod +x /opt/hadoop/start/start-hadoop.sh
 EXPOSE 8088 9870 9864 8030 8031 8032 8033 9000
 RUN mkdir /opt/hadoop/name_node
 RUN mkdir /opt/hadoop/data_node
-CMD BASH /opt/hadoop/start/start-hadoop.sh
+CMD bash /opt/hadoop/start/start-hadoop.sh
