@@ -82,7 +82,7 @@ THIS_SERVER_DETAILS = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT')+"/1",
+        "LOCATION": "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT1')+"/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -121,9 +121,9 @@ DEPLOYMENT_ENV = env('DEPLOYMENT_ENV')
 HADOOP_CONF_DIR=False
 HADOOP_USER_NAME="hduser"
 
-CELERY_BROKER_URL = "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT')+"/"
+CELERY_BROKER_URL = "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT1')+"/"
 # CELERY_RESULT_BACKEND = "django-db"
-CELERY_RESULT_BACKEND = "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT')+"/"
+CELERY_RESULT_BACKEND = "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT1')+"/"
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -159,7 +159,7 @@ KYLO_SERVER_DETAILS = {
 CELERY_ONCE_CONFIG = {
   'backend': 'celery_once.backends.Redis',
   'settings': {
-    'url': "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT')+"/",
+    'url': "redis://"+env('REDIS_IP')+":"+env('REDIS_PORT1')+"/",
     'default_timeout': 60 * 60
   }
 }
@@ -187,6 +187,7 @@ OUTLOOK_SCOPES = [ 'openid',
            'Mail.Read',
            'offline_access']
 
+OUTLOOK_TOKEN_URL = 'https://login.microsoftonline.com/' + OUTLOOK_DETAILS['tenant_id'] + '/oauth2/v2.0/token'
 
 # OUTLOOK_AUTH_CODE =  '''OAQABAAIAAACQN9QBRU3jT6bcBQLZNUj73VtUUkVft_y8E3LBiK5eHMgCAKSe2DofhiCUf_WNN-a_l1cbKsyOBMw9JLKR0dl7olaPOw7331ZLCyfHnQpqZdpxHb8sTqubDX9P-0bISqCH7Ytp-kujV1M7ZEoB689Vvw1dR9hJRpRpMkKoXdOTivVbIp1e3vjLt5gRf_mnJ9-azGdRGmSjscq8-13gwS_WA35S9NTikCjxnIft8FrlkVwvBzRknSxzdtLWVwQfhQ3C0CjRa3PCijwSUwuTyy2cyq2aBdUv50xJN3pPKqh3_kYSmrNjGnp1dbg1xl-63uLW9j2Qv3R6pI2KcutxbBIbZAlk95ptRA2hICepkkLZiXca93B0MiCPRr2L2HL5S9ZK0IbL9wZi4CiOTL3_jXSqpK72VmXIO6scrOYFyz-8vdxTF-5eIO4pvtE0FeHbeX5s7c-EhrVAtrrG7N9Ccs5DyA1Zv8DkP3mjl72NLmgEJc9GxRMKrtNr2yLaGPg8sQ1_H-2Fe8L0unmTYMQ9ln_JGA3mMmBz9VqWB7XGKcZuOBzUi-G0WxehMD7o5oP9oGagsbZ9ZEJUHY3r-V2QPdpyq4M9CEY79O8UgWLcZ5kiTg7RJzsUS3jvZL38mWFzYvUG-gn3vi9Lv9w9xrkxXWEKO5jokN8hVYXUpKkCQIPWNUuIjF_iZbUq1cmaw7mNvzDvBiAi3ilnFRj_MIe7Q9D474ZcDP9pj8IBFkdCR-sA74SbN8nMAKmvkIwpABbpAgfQoqYtGeEDwietHjLCuipuRogqW2RApJ3HWw7UdK3KP8pr1iOapnRfPsX0XRRNqW31B6KCcljLPBrcNwsjnatIS42scxy9NQTNhXvFfMmvuv_fIQUmzcPkCBbyBDTZEPIgAA'''
 OUTLOOK_AUTH_CODE = env('OUTLOOK_AUTH_CODE')

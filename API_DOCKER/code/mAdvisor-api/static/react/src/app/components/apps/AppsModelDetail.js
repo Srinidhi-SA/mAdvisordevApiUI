@@ -1,13 +1,11 @@
 import React from "react";
 import {connect} from "react-redux";
 import store from "../../store";
-import {MainHeader} from "../common/MainHeader";
-import {Tabs,Tab,Button} from "react-bootstrap";
+import {Button} from "react-bootstrap";
 import {AppsCreateScore} from "./AppsCreateScore";
 import {Card} from "../signals/Card";
-import {getListOfCards,getAppsModelSummary,updateModelSlug,handleExportAsPMMLModal,getAppDetails,updateModelSummaryFlag, getAppsAlgoList, clearAppsAlgoList, clearModelSummary} from "../../actions/appActions";
+import {getAppsModelSummary,updateModelSlug,handleExportAsPMMLModal,getAppDetails,updateModelSummaryFlag, getAppsAlgoList, clearAppsAlgoList, clearModelSummary} from "../../actions/appActions";
 import {storeSignalMeta} from "../../actions/dataActions";
-import CircularProgressbar from 'react-circular-progressbar';
 import {STATIC_URL} from "../../helpers/env.js"
 import {isEmpty} from "../../helpers/helper";
 import {Link} from "react-router-dom";
@@ -184,7 +182,14 @@ export class AppsModelDetail extends React.Component {
 							return (<div key={i} className={nonClearfixClass}><Card cardData={cardDataArray} cardWidth={data.cardWidth}/></div>)
 						}
 					}else{
-						return""
+						if(data.cardWidth == 100 || componentsWidth == 0 || componentsWidth+data.cardWidth > 100){
+							componentsWidth = data.cardWidth;
+							return (<div key={i} className={clearfixClass}></div>)
+						}
+						else{
+							componentsWidth = componentsWidth+data.cardWidth;
+							return (<div key={i} className={nonClearfixClass}></div>)
+						}
 					}
 				});
 			}
@@ -239,15 +244,9 @@ export class AppsModelDetail extends React.Component {
 		else{
 			return (
 				<div className="side-body">
-					<div className="page-head"></div>
-					<div className="main-content">
 						<img id="loading" src={ STATIC_URL + "assets/images/Preloader_2.gif" } />
-					</div>
 				</div>
 			);
 		}
-	}
-	componentWillUnmount(){
-		this.props.dispatch(clearModelSummary())
 	}
 }

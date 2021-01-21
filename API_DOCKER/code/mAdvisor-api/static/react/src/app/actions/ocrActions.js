@@ -44,6 +44,12 @@ export function saveImageDetails(data) {
 		data
 	}
 }
+export function pdfPagination(data) {
+	return {
+		type: "PDF_PAGINATION",
+		data
+	}
+}
 
 export function clearImageDetails() {
 	return {
@@ -54,6 +60,13 @@ export function clearImageDetails() {
 export function updateOcrImage(data) {
 	return {
 		type: "UPDATE_OCR_IMAGE",
+		data
+	}
+}
+
+export function updateCustomImage(data) {
+	return {
+		type: "UPDATE_CUSTOM_IMAGE",
 		data
 	}
 }

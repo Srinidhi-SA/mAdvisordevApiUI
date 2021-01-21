@@ -1,9 +1,7 @@
 import React from "react";
 import store from "../../store";
 import {connect} from "react-redux";
-
-import {MainHeader} from "../common/MainHeader";
-import {Tabs, Tab, Pagination} from "react-bootstrap";
+import {Pagination} from "react-bootstrap";
 import {Link, Redirect} from "react-router-dom";
 import {
   updateSelectedApp,
@@ -20,24 +18,12 @@ import {
   updateAppsFilterList,
   getAppsFilteredList,
   clearDataPreview,
-  updateAnalystModeSelectedFlag,
 } from "../../actions/appActions";
 import {STATIC_URL,APPS_ALLOWED} from "../../helpers/env.js"
 import { API } from "../../helpers/env";;
 import {
   SEARCHCHARLIMIT,
-  APPID1,
-  APPID2,
-  APPID3,
-  APPID4,
-  APPNAME1,
-  APPNAME2,
-  APPNAME3,
-  APPNAME4,
-  APPNAME5,
-  APPID5,
   getUserDetailsOrRestart,
-  isEmpty
 } from "../../helpers/helper.js"
 import {cookieObj} from '../../helpers/cookiesHandler';
 import { dashboardMetrics,selectedProjectDetails,saveDocumentPageFlag } from '../../actions/ocrActions';
@@ -46,8 +32,6 @@ import { dashboardMetrics,selectedProjectDetails,saveDocumentPageFlag } from '..
   return {
     login_response: store.login.login_response,
     modelList: store.apps.modelList,
-    // algoList: store.appsAlgoList,
-
     modelSummaryFlag: store.apps.modelSummaryFlag,
     modelSlug: store.apps.modelSlug,
     currentAppId: store.apps.currentAppId,
@@ -67,12 +51,26 @@ export class AppsPanel extends React.Component {
   }
   componentWillMount() {
     var pageNo = 1;
-    if (this.props.history.location.search.indexOf("page") != -1) {
-      pageNo = this.props.history.location.search.split("page=")[1];
+    if(this.props.history.location.search!=""){
+      let urlParams = new URLSearchParams(this.props.history.location.search);
+      pageNo = (urlParams.get("pageNo")!="")?urlParams.get("pageNo"):pageNo
+      if(urlParams.get('filterApplied')!=null){
+        let lst = urlParams.get('filterApplied').split(",");
+        this.props.dispatch(updateAppsFilterList(lst));
+        this.props.dispatch(getAppsFilteredList(getUserDetailsOrRestart.get().userToken,pageNo))
+      }else{
+        let searchELem = (urlParams.get('search')!=null)?urlParams.get('search'):"";
+        let sortELem = (urlParams.get('sort')!=null)?urlParams.get('sort'):"";
+        let sortType = (urlParams.get('type')!=null)?urlParams.get('type'):"";
+        this.props.dispatch(appsStoreSearchEle(searchELem));
+        this.props.dispatch(appsStoreSortElements(sortELem,sortType));
+        this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken,pageNo));
+      }
+    }else if (this.props.history.location.search.indexOf("pageNo") != -1) {
+      pageNo = this.props.history.location.search.split("pageNo=")[1];
       this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, pageNo));
     } else
       this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, pageNo));
-    this.props.dispatch(updateAppsFilterList([]))
     this.props.dispatch(selectedProjectDetails('',''));
     this.props.dispatch(saveDocumentPageFlag(false));
   }
@@ -80,15 +78,23 @@ export class AppsPanel extends React.Component {
   onChangeAppsSearchBox(e) {
     if (e.target.value == "" || e.target.value == null) {
       this.props.dispatch(appsStoreSearchEle(""));
-      this.props.history.push('/apps');
+      if(this.props.storeAppsSortByElement!="" && this.props.storeAppsSortByElement!=null){
+        this.props.history.push('/apps?sort=' + this.props.storeAppsSortByElement + '&type=' + this.props.storeAppsSortType);
+      }else{
+        this.props.history.push('/apps');
+      }
       this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, 1));
 
     } else if (e.target.value.length > SEARCHCHARLIMIT) {
-      this.props.history.push('/apps?search=' + e.target.value + '')
+      if(this.props.storeAppsSortByElement!="" && this.props.storeAppsSortByElement!=null){
+        this.props.history.push('/apps?search='+ e.target.value +'&sort=' + this.props.storeAppsSortByElement + '&type=' + this.props.storeAppsSortType);
+      }else{
+        this.props.history.push('/apps?search=' + e.target.value + '')
+      }
       this.props.dispatch(appsStoreSearchEle(e.target.value));
       this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, 1));
     }
-      if(this.props.app_filtered_keywords!=null)
+    if(this.props.app_filtered_keywords!=null)
       this.props.dispatch(updateAppsFilterList([]));
  }
   _handleKeyPress = (e) => {
@@ -100,6 +106,8 @@ export class AppsPanel extends React.Component {
     }
   }
   handleCheckboxChange(e) {
+    this.props.dispatch(appsStoreSearchEle(""));
+    this.props.dispatch(appsStoreSortElements("",""))
     e.preventDefault();
     var array = this.props.app_filtered_keywords;
     var index = array.indexOf(e.target.name)
@@ -164,11 +172,20 @@ export class AppsPanel extends React.Component {
   }
   handleSearchReset() {
     this.props.dispatch(appsStoreSearchEle(""));
-    this.props.history.push('/apps');
+    if(this.props.storeAppsSortByElement!="" && this.props.storeAppsSortByElement!=null){
+      this.props.history.push('/apps?sort=' + this.props.storeAppsSortByElement + '&type=' + this.props.storeAppsSortType);
+    }else{
+      this.props.history.push('/apps');
+    }
     this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, 1));
   }
   handleSorting(sortBy, sortType) {
-    this.props.history.push('/apps?sort=' + sortBy + '&type=' + sortType);
+    this.props.dispatch(updateAppsFilterList([]))
+    if(store.getState().apps.storeAppsSearchElement!=""){
+      this.props.history.push('/apps?search='+ store.getState().apps.storeAppsSearchElement +'&sort=' + this.props.storeAppsSortByElement + '&type=' + this.props.storeAppsSortType);
+    }else{
+      this.props.history.push('/apps?sort=' + sortBy + '&type=' + sortType);
+    }
     this.props.dispatch(appsStoreSortElements(sortBy, sortType));
     this.props.dispatch(getAppsList(getUserDetailsOrRestart.get().userToken, 1));
   }
@@ -226,7 +243,7 @@ export class AppsPanel extends React.Component {
              <div className="app-block">
                <Link className="app-link" id={data.name} onClick={this.gotoAppsList.bind(this, data.app_id, data.name,data)} to= 
                {(data.app_id == 2 || data.app_id == 13) ? 
-               data.app_url.replace("/models","") + "/modeSelection" : 
+                data.app_url.replace("/models","") +"/modeSelection": 
                (data.displayName== "ITE" && (getUserDetailsOrRestart.get().userRole == "Admin" || getUserDetailsOrRestart.get().userRole ==  "Superuser"))?
                data.app_url.concat("project"):
                ((data.displayName== "ITE" && (getUserDetailsOrRestart.get().userRole == "ReviewerL1" || getUserDetailsOrRestart.get().userRole ==  "ReviewerL2"))?         
@@ -304,7 +321,6 @@ export class AppsPanel extends React.Component {
 
       }else{
         return(<div className="side-body">
-          <div className="page-head"></div>
         <img id="loading" src={STATIC_URL + "assets/images/Preloader_2.gif"}/>
       </div>)
       }
@@ -323,7 +339,7 @@ export class AppsPanel extends React.Component {
                 <div class="input-group">
                   <div className="search-wrapper">
                     <form>
-                      <input type="text" name="search_apps" onKeyPress={this._handleKeyPress.bind(this)} onChange={this.onChangeAppsSearchBox.bind(this)} title="Search Apps..." id="search_apps" className="form-control search-box" placeholder="Search Apps..." required/>
+                      <input defaultValue={store.getState().apps.storeAppsSearchElement} type="text" name="search_apps" onKeyPress={this._handleKeyPress.bind(this)} onChange={this.onChangeAppsSearchBox.bind(this)} title="Search Apps..." id="search_apps" className="form-control search-box" placeholder="Search Apps..." required/>
                       <span className="zmdi zmdi-search form-control-feedback"></span>
                       <button className="close-icon" type="reset" onClick={this.handleSearchReset.bind(this)}></button>
                     </form>
@@ -344,67 +360,15 @@ export class AppsPanel extends React.Component {
                         <i class="zmdi zmdi-sort-amount-desc"></i>
                         &nbsp;Name Descending</a>
                     </li>
-                    {/*  <li>
-                <a href="#" onClick={this.handleSorting.bind(this,'created_at','-')}><i class="fa fa-sort-numeric-asc" aria-hidden="true"></i> Date Ascending</a>
-                </li>*/}
                   </ul>
                 </div>
                     
                 <div class={this.props.app_filtered_keywords.length>0? "btn-group selected":"btn-group"}>
-
-                  {/*<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-filter fa-lg"></i> <span class="caret"></span></button>
-
-                <ul role="menu" class="dropdown-menu dropdown-menu-right">
-                <li>
-                                <input type="text" class="form-control" />
-
-                              </li>
-                <li>
-
-				<div className="ma-checkbox inline">
-				<input type="checkbox" id="chk_mea0" name="0" class="" value="Finance" />
-				<label for="chk_mea0" class="radioLabels">Finance</label>
-				</div>
-
-				</li>
-				<li className="xs-pl-10">
-				<div className="ma-checkbox inline"><input type="checkbox" className="" />
-				<label>Marketing</label>
-				</div>
-				</li>
-				<li className="xs-pl-10">
-				<div className="ma-checkbox inline"><input type="checkbox" className="" />
-				<label>Sales</label>
-				</div>
-				</li>
-                <li className="xs-pl-10">
-				<div className="ma-checkbox inline"><input type="checkbox" className="" />
-				<label>Operations</label>
-				</div>
-				</li>*/}
                   <button type="button" title="Filter" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <i class="zmdi zmdi-hc-lg zmdi-filter-list"></i>
                   </button>
                   <ul role="menu" class="dropdown-menu dropdown-menu-right">
-                    {/*<li>
-                      <input type="text" class="form-control"/>
-                    </li>*/}
-                    {/*<table id="filterList" className="tablesorter table table-condensed table-hover table-bordered">
-                      <thead></thead>
-                      <tbody>*/}
                     {filterListTemplate}
-                    {/*</tbody>
-                    </table>*/}
-
-                    {/*<li>
-                <label><input type="checkbox" /> Finance</label>
-                </li>
-                <li>
-                <a href="#"><i class="fa fa-sort-numeric-asc" aria-hidden="true"></i> Date Ascending</a>
-                </li>
-                <li>
-                <a href="#"><i class="fa fa-sort-numeric-desc" aria-hidden="true"></i> Date Descending</a>
-                </li>*/}
                   </ul>
                 </div>
               </div>
@@ -414,35 +378,6 @@ export class AppsPanel extends React.Component {
 
         <div className="main-content">
           <div className="row">
-            {/* <div className="col-md-4">
-          <div className="app-block">
-                <Link className="app-link"  to= "/apps/lex">
-                  <div className="col-md-4 col-sm-3 col-xs-5 xs-p-20">
-                  <img src={STATIC_URL + "assets/images/app_lex1.png"} class="img-responsive" />
-                  </div>
-                  <div className="col-md-8 col-sm-9 col-xs-7">
-                    <h4>
-                      Lex
-                    </h4>
-                    <p>
-                    To extract sentiments, emotions and context from audio/voice
-                    </p>
-                  </div>
-                  <div class="clearfix"></div>
-                </Link>
-
-                <div className="card-footer">
-                  <ul className="app_labels">
-                  <li><a href="#"><i class="fa fa-tag"></i>Marketing</a></li>
-                  <li><a href="#"><i class="fa fa-tag"></i>Customer Service</a></li>
-                  </ul>
-
-                  <div id="myPopover" className="pop_box hide">
-                    <p>Info</p>
-                  </div>
-                </div>
-              </div>
-              </div> */}
             {appListTemplate}
             <div className="clearfix"></div>
           </div>

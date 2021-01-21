@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom';
 import {
-  getOcrUploadedFiles, saveImagePageFlag, saveDocumentPageFlag, saveImageDetails,
+  getOcrUploadedFiles, saveImagePageFlag, saveDocumentPageFlag, saveImageDetails, pdfPagination,
   saveSelectedImageName, storeOcrSortElements, updateCheckList, storeOcrFilterStatus, setProjectTabLoaderFlag,
   storeOcrFilterConfidence, storeOcrFilterAssignee, storeDocSearchElem, tabActiveVal, storeOcrFilterFields, clearImageDetails, storeOcrFilterTemplate, docTablePage, docTablePagesize
 } from '../../../actions/ocrActions';
@@ -23,7 +23,7 @@ import { Scrollbars } from 'react-custom-scrollbars';
     projectName: store.ocr.selected_project_name,
     revDocumentFlag: store.ocr.revDocumentFlag,
     reviewerName: store.ocr.selected_reviewer_name,
-    projectTabLoaderFlag: store.ocr.projectTabLoaderFlag
+    projectTabLoaderFlag: store.ocr.projectTabLoaderFlag,
   };
 })
 
@@ -68,20 +68,32 @@ export class OcrTable extends React.Component {
     this.setState({ checkAll: false, checkedList: [] });
     this.props.dispatch(getOcrUploadedFiles());
   }
-  handleImagePageFlag = (slug, name) => {
-    this.getImage(slug)
+  handleImagePageFlag = (slug,name,doctype) => {
+    this.getImage(slug,doctype)
     this.props.dispatch(saveSelectedImageName(name));
     this.props.dispatch(saveImagePageFlag(true));
   }
 
-  getImage = (slug) => {
-    return fetch(API + '/ocr/ocrimage/' + slug + '/', {
-      method: 'get',
-      headers: this.getHeader(getUserDetailsOrRestart.get().userToken),
-    }).then(response => response.json())
-      .then(data => {
-        this.props.dispatch(saveImageDetails(data));
-      });
+  getImage = (slug, doctype) => {
+    if (doctype == "pdf") {
+      return fetch(API + '/ocr/ocrimage/retrieve_pdf/?slug=' + slug + '&page_size=1&page_number=1', {
+        method: 'get',
+        headers: this.getHeader(getUserDetailsOrRestart.get().userToken),
+      }).then((response) => response.json())
+        .then(json => {
+          this.props.dispatch(saveImageDetails(json.data[0]));
+          this.props.dispatch(pdfPagination(json));
+        })
+    }
+    else {
+      return fetch(API + '/ocr/ocrimage/' + slug + '/', {
+        method: 'get',
+        headers: this.getHeader(getUserDetailsOrRestart.get().userToken),
+      }).then(response => response.json())
+        .then(data => {
+          this.props.dispatch(saveImageDetails(data));
+        });
+    }
   }
   sortOcrList(sortBy, sortOrder) {
     this.props.dispatch(storeOcrSortElements(sortBy, sortOrder))
@@ -93,16 +105,21 @@ export class OcrTable extends React.Component {
     this.setState({ filterVal: mode })
   }
 
-  disableInputs(mode, reset) {
-    let idList = ''
-    mode[0] == "C" ? idList = ['CEQL', 'CGTE', 'CLTE'] : idList = ['FEQL', 'FGTE', 'FLTE']
-
-    let disableIds = reset != 'reset' ? idList.filter(i => i != mode) : idList
-
-    if (document.getElementById(mode).value.trim() != '')
+  disableInputs(mode, reset,filterOn=null) {
+    if(reset=="reset"){ //clear entered value and enable all fields on reset(All)
+      var selectedFieldIds = filterOn=='confidence'? ['CEQL','CGTE','CLTE']:['FEQL','FGTE','FLTE'];
+      selectedFieldIds.map(i=>document.getElementById(i).value='')
+      selectedFieldIds.map(i=>$(`#${i}`).attr('disabled', false))
+      
+    }else{//disable other two inputs while entering value
+      let idList = mode[0] == "C" ? ['CEQL', 'CGTE', 'CLTE'] : ['FEQL', 'FGTE', 'FLTE']  
+      let disableIds = idList.filter(i => i != mode)
+      
+      if (document.getElementById(mode).value.trim() != '')
       disableIds.map(i => $(`#${i}`).attr('disabled', true))
-    else
+      else
       disableIds.map(i => $(`#${i}`).attr('disabled', false))
+    }
   }
 
   filterOcrList(filtertBy, filterOn, reset) {
@@ -129,8 +146,7 @@ export class OcrTable extends React.Component {
     }
     this.props.dispatch(getOcrUploadedFiles())
     if (reset == 'reset') {
-      document.getElementById(this.state.filterVal).value = ''
-      this.disableInputs(this.state.filterVal, 'reset')
+      this.disableInputs(this.state.filterVal, 'reset',filterOn)
     }
   }
 
@@ -253,20 +269,10 @@ export class OcrTable extends React.Component {
   filterByImageStatus(e) {
     this.setState({ checkAll: false, checkedList: [] })
     this.props.dispatch(setProjectTabLoaderFlag(true));
-
-    //  var filterInputs= document.getElementsByClassName('filter_input') //For resetting input values on tabChange, Dont delete
-    //  for(let i=0;i<filterInputs.length;i++){
-    //    document.getElementsByClassName('filter_input')[i].value='';
-    //    document.getElementsByClassName('filter_input')[i].disabled=false;
-    //  }
-
     this.props.dispatch(storeOcrFilterStatus(''));
     this.props.dispatch(storeOcrFilterConfidence(''));
     this.props.dispatch(storeOcrFilterAssignee(''));
     this.props.dispatch(storeOcrFilterFields(''));
-
-
-
     this.props.dispatch(tabActiveVal(e.target.id))
     this.props.dispatch(getOcrUploadedFiles())
   }
@@ -334,7 +340,6 @@ export class OcrTable extends React.Component {
       }).then(response => response.text()).then(json => {
         var blob = new Blob([json], { type: 'text/csv;charset=utf-8;' });
         var url = URL.createObjectURL(blob);
-        // var dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(JSON.stringify(json));
         var dlAnchorElem = document.getElementById('downloadAnchorElem');
         dlAnchorElem.setAttribute("href", url);
         dlAnchorElem.setAttribute("download", `${this.state.exportName}.csv`);
@@ -372,7 +377,7 @@ export class OcrTable extends React.Component {
     let paginationTag = null
     if (pages >= 1) {
       paginationTag = (
-        <div class="col-md-12 text-center">
+        <div className="col-md-12 text-center">
           <div className="footer" id="Pagination">             
             <div className="pagination pageRow">
             <span>Rows per page:</span>
@@ -390,7 +395,7 @@ export class OcrTable extends React.Component {
     }
 
     var getAssigneeOptions = (this.props.OcrDataList != '' ? this.props.OcrDataList.data.length != 0 ? [...new Set(this.props.OcrDataList.data.map(i => i.assignee).filter(j => j != null))].map((item,index) => {
-      return <li key={index}><a class="cursor" onClick={this.filterOcrList.bind(this, item, 'assignee')} name="all" data-toggle="modal" data-target="#modal_equal"> {item}</a></li>
+      return <li key={index}><a className="cursor" onClick={this.filterOcrList.bind(this, item, 'assignee')} name="all" data-toggle="modal" data-target="#modal_equal"> {item}</a></li>
     }
     ) : '' : '')
 
@@ -439,7 +444,6 @@ export class OcrTable extends React.Component {
           <div id="resetMsg"></div>
           <Button id="Rd_dataCloseBtn" onClick={this.hideClick.bind(this)} bsStyle="primary">Hide</Button>
           <Button id="Rd_loadDataBtn" onClick={this.proceedClick.bind(this)} disabled={this.state.loader} bsStyle="primary">Proceed</Button>
-
         </Modal.Footer>
       </Modal>
     </div>)
@@ -456,7 +460,7 @@ export class OcrTable extends React.Component {
               <i style={{ color: '#414f50', fontSize: 14 }} className={item.type == ".pdf" ? "fa fa-file-pdf-o" : "fa fa-file-image-o"}></i>
             </td>
             <td style={status.includes(item.status) ? { cursor: 'not-allowed' } : { cursor: 'pointer' }}>
-              <Link title={item.name} style={status.includes(item.status) ? { pointerEvents: 'none' } : { pointerEvents: 'auto' }} to={`/apps/ocr-mq44ewz7bp/project/${item.name}`} onClick={() => { this.handleImagePageFlag(item.slug, item.name) }}>{item.name}</Link>
+              <Link title={item.name} style={status.includes(item.status) ? { pointerEvents: 'none' } : { pointerEvents: 'auto' }} to={`/apps/ocr-mq44ewz7bp/project/${item.name}`} onClick={() => { this.handleImagePageFlag(item.slug, item.name, item.doctype) }}>{item.name}</Link>
             </td>
             <td>{item.status}</td>
             {store.getState().ocr.tabActive == 'active' &&
@@ -465,7 +469,7 @@ export class OcrTable extends React.Component {
             <td>{item.classification}</td>
             <td>{item.fields}</td>
             <td>{item.confidence}</td>
-            {store.getState().ocr.tabActive == 'active' ? <td>{item.assignee}</td> : ''}
+            {store.getState().ocr.tabActive == 'active' && <td>{item.assignee}</td>}
             <td>{item.created_by}</td>
             <td>{item.modified_by}</td>
             <td>{new Date(item.modified_at).toLocaleString().replace(/([\d]+:[\d]{2})(:[\d]{2})(.*)/, "$1$3")}</td>
@@ -478,75 +482,62 @@ export class OcrTable extends React.Component {
       )
         : (<tr><td className='text-center' colSpan={11}>"No data found for your selection"</td></tr>)
       )
-        : (<img id="loading" style={{ position: 'relative', left: '600px' }} src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
-    )
+        : (<tr><td colSpan={11}><img src={STATIC_URL + "assets/images/Preloader_2.gif"} /></td></tr>)
+        )
 
     return (
       <div>
-        <div class="row">
-          <div class="col-sm-6">
+        <div className="row">
+          <div className="col-sm-6">
             <a id="downloadAnchorElem" style={{ display: 'none' }}></a>
-            {this.props.revDocumentFlag ? (<ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="/apps/ocr-mq44ewz7bp/reviewer/" title="Reviewers"><i class="fa fa-arrow-circle-left"></i> Reviewers</a></li>
-              <li class="breadcrumb-item active"><a style={{ 'cursor': 'default' }}>{this.props.reviewerName}</a></li>
-            </ol>) : (<ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="/apps/ocr-mq44ewz7bp/project/" title="Projects"><i class="fa fa-arrow-circle-left"></i> Projects</a></li>
-              <li class="breadcrumb-item active"><a style={{ 'cursor': 'default' }}>{this.props.projectName}</a></li>
+            {this.props.revDocumentFlag ? (<ol className="breadcrumb">
+              <li className="breadcrumb-item"><a href="/apps/ocr-mq44ewz7bp/reviewer/" title="Reviewers"><i className="fa fa-arrow-circle-left"></i> Reviewers</a></li>
+              <li className="breadcrumb-item active"><a style={{ 'cursor': 'default' }}>{this.props.reviewerName}</a></li>
+            </ol>) : (<ol className="breadcrumb">
+              <li className="breadcrumb-item"><a href="/apps/ocr-mq44ewz7bp/project/" title="Projects"><i className="fa fa-arrow-circle-left"></i> Projects</a></li>
+              <li className="breadcrumb-item active"><a style={{ 'cursor': 'default' }}>{this.props.projectName}</a></li>
             </ol>)
             }
           </div>
 
           {this.props.OcrDataList != '' ? this.props.OcrDataList.total_data_count_wf >= 1 ?
-            <div class="col-sm-6 text-right">
-              <div class="form-inline">
+            <div className="col-sm-6 text-right">
+              <div className="form-inline">
                 <OcrUpload uploadMode={'topPanel'} />
 
                 <ReactTooltip place="top" type="light" />
                 <Button onClick={this.handleRecognise} title="Recognize" style={{ textTransform: 'none' }} className="xs-ml-5 xs-mr-5 btn-color" data-tip="Select documents and click here to run ITE operation" >Recognize</Button>
 
-                {/* <button class="btn btn-default btn-rounded" id="exportBtn" onClick={this.handleExport}><i class="fa fa-paper-plane"></i> Export</button> */}
-                {/* <div class="form-group pull-right ocr_highlightblock" data-tip='Select documents from the list below and click here to export. Documents with status "Ready to Export" only can be exported'>
-                  
-				  <label class="control-label xs-mb-0" for="select_export" onClick={this.handleExport}  style={{ cursor: 'pointer' }}><i class="fa fa-paper-plane"></i> Export to</label>
-                  <select class="form-control inline-block 1-100" id="select_export"  style={{ cursor: 'pointer' }} onChange={(e) => this.setState({ exportType: e.target.value }, this.handleExport)}>
-
-                    <option value="json">JSON</option>
-                    <option value="xml">XML</option>
-                    <option value="csv">CSV</option>
-                  </select>
-                </div> */}
-
                 <ReactTooltip place="left" type="light" id="exportTip" />
                 <ul className="export" >
-                  <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                      <span data-for="exportTip" style={{ paddingRight: 10 }} place="left" data-tip='Select documents from the list below and click here to export. Documents with status "Ready to Export" only can be exported'>
-                        <i class="fa fa-paper-plane"></i>  Export
+                  <li className="dropdown">
+                    <a className="dropdown-toggle" data-toggle="dropdown" href="#">
+                      <span data-for="exportTip" className="xs-pr-10" data-tip='Select documents from the list below and click here to export. Documents with status "Ready to Export" only can be exported'>
+                        <i className="fa fa-paper-plane"></i>  Export
                       </span>
-                      <b class="caret"></b>
+                      <b className="caret"></b>
                     </a>
-                    <ul class="dropdown-menu" onClick={(e) => this.setState({ exportType: e.target.text.toLowerCase() }, this.handleExport)}>
+                    <ul className="dropdown-menu" onClick={(e) => this.setState({ exportType: e.target.text.toLowerCase() }, this.handleExport)}>
                       <li><a role="tab" value="json" data-toggle="tab">JSON</a></li>
                       <li><a role="tab" value="xml" data-toggle="tab">CSV</a></li>
                       <li><a role="tab" value="csv" data-toggle="tab">XML</a></li>
                     </ul>
                   </li>
                 </ul>
-
               </div>
             </div> : "" : ""}
         </div>
 
 
 
-        <div class="tab-container">
+        <div className="tab-container">
           {this.props.OcrDataList != '' ? this.props.OcrDataList.total_data_count_wf >= 1 ? <ul className="nav nav-tabs" style={{ cursor: "default" }}>
             <li className="active"><a data-toggle="tab" id="backlog" name="Backlog" onClick={this.filterByImageStatus.bind(this)} data-tip="Documents that are pending assignment are displayed here">Backlog</a></li>
             <li className=""><a data-toggle="tab" id="active" name="Active" onClick={this.filterByImageStatus.bind(this)} data-tip="Documents that are assigned for review are displayed here">Active</a></li>
 
             <li className="pull-right">
-              <div class="form-group xs-mt-10 xs-mb-0">
-                <input type="text" id="search" class="form-control btn-rounded" title="Search by name..." onKeyUp={this.handleSearchBox.bind(this)} placeholder="Search by name..."></input>
+              <div className="form-group xs-mt-10 xs-mb-0">
+                <input type="text" id="search" className="form-control btn-rounded" title="Search by name..." onKeyUp={this.handleSearchBox.bind(this)} placeholder="Search by name..."></input>
               </div>
             </li>
           </ul> : "" : ""}
@@ -562,79 +553,79 @@ export class OcrTable extends React.Component {
                       <thead>
                         <tr>
                           {this.props.OcrDataList != '' ? this.props.OcrDataList.data.length != 0 ?
-                            <th>
-                              <Checkbox onChange={this.handleCheckAll.bind(this, this.props)} checked={this.state.checkAll}></Checkbox>
-                            </th> : "" : ""}
-                          <th><i class="fa fa-file-text-o"></i></th>
+                          <th>
+                          <Checkbox onChange={this.handleCheckAll.bind(this, this.props)} checked={this.state.checkAll}></Checkbox>
+                          </th>:null:null}
+                          <th><i className="fa fa-file-text-o"></i></th>
                           <th>NAME</th>
-                          <th class="dropdown" >
-                            <a href="#" data-toggle="dropdown" disable class="dropdown-toggle cursor" title="Status" aria-expanded="true">
-                              <span>STATUS</span> <b class="caret"></b>
+                          <th className="dropdown" >
+                            <a href="#" data-toggle="dropdown" className="dropdown-toggle cursor" title="Status" aria-expanded="true">
+                              <span>STATUS</span> <b className="caret"></b>
                             </a>
-                            <ul class="dropdown-menu scrollable-menu dropdownScroll">
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, '', 'status')} name='all'>All</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'R', 'status')} name="ready to recognize">Ready to Recognize</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'A', 'status')} name="ready to assign">Ready to Assign</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'V1', 'status')} name="ready to verify">Ready to Verify(L1)</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'C1', 'status')} name="ready to verify">L1 Verified</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'V2', 'status')} name="ready to verify">Ready to Verify(L2)</a></li>
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, 'E', 'status')} name="ready to export">Ready to Export</a></li>
+                            <ul className="dropdown-menu scrollable-menu dropdownScroll">
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, '', 'status')}>All</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'R', 'status')}>Ready to Recognize</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'A', 'status')}>Ready to Assign</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'V1', 'status')}>Ready to Verify(L1)</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'C1', 'status')}>L1 Verified</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'V2', 'status')}>Ready to Verify(L2)</a></li>
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, 'E', 'status')}>Ready to Export</a></li>
                             </ul>
                           </th>
                           {store.getState().ocr.tabActive == 'active' &&
                             <th>ROLE</th>
                           }
-                          <th class="dropdown" >
-                            <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Template" aria-expanded="true">
-                              <span>TEMPLATE</span> <b class="caret"></b>
+                          <th className="dropdown" >
+                            <a href="#" data-toggle="dropdown" className="dropdown-toggle cursor" title="Template" aria-expanded="true">
+                              <span>TEMPLATE</span> <b className="caret"></b>
                             </a>
-                            <ul class="dropdown-menu scrollable-menu dropdownScroll template" style={{ minWidth: '130px',paddingLeft:0 }}>
+                            <ul className="dropdown-menu scrollable-menu dropdownScroll template" style={{ minWidth: '130px',paddingLeft:0 }}>
                               <Scrollbars className="templateScroll" style={{ height: 160, overflowX: 'hidden' }} >
                                 <li><a className= { store.getState().ocr.filter_template== "" ? "active cursor" : "cursor" }  onClick={this.filterOcrList.bind(this, '', 'template')} name='all'>All</a></li>
                                 {getTemplateOptions} 
                               </Scrollbars>
                             </ul>
                           </th>
-                          <th class="dropdown" >
-                            <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Fields" aria-expanded="true">
-                              <span>FIELDS</span> <b class="caret"></b>
+                          <th className="dropdown" >
+                            <a href="#" data-toggle="dropdown" className="dropdown-toggle cursor" title="Fields" aria-expanded="true">
+                              <span>FIELDS</span> <b className="caret"></b>
                             </a>
-                            <ul class="dropdown-menu scrollable-menu">
+                            <ul className="dropdown-menu scrollable-menu filterOptions">
                               <li><a className="cursor" onClick={this.filterOcrList.bind(this, '', 'fields', 'reset')} name="all" data-toggle="modal" data-target="#modal_equal">All</a></li>
-                              <li><a className="equal" style={{ display: 'inline-block', width: 101 }} >Equal to</a>
-                                <input id='FEQL' className='fields filter_input pull-right xs-mr-5' onChange={this.handleFil.bind(this, 'FEQL')} type='number'></input></li>
-                              <li><a className="greater" style={{ display: 'inline-block', width: 101 }} >Greater than</a>
-                                <input id='FGTE' className='fields filter_input pull-right xs-mr-5' onChange={this.handleFil.bind(this, 'FGTE')} type='number'></input></li>
-                              <li><a className="less" style={{ display: 'inline-block', width: 101 }}>Less than</a>
-                                <input id='FLTE' className='fields filter_input pull-right xs-mr-5' onChange={this.handleFil.bind(this, 'FLTE')} type='number'></input></li>
-                              <button className="btn btn-xs btn-primary pull-right xs-mt-10 xs-mr-5 filterCheckBtn" onClick={this.filterOcrList.bind(this, '', 'fields', '')}><i class="fa fa-check"></i></button>
+                              <li><a >Equal to</a>
+                                <input id='FEQL' onChange={this.handleFil.bind(this, 'FEQL')} type='number'></input></li>
+                              <li><a>Greater than</a>
+                                <input id='FGTE' onChange={this.handleFil.bind(this, 'FGTE')} type='number'></input></li>
+                              <li><a>Less than</a>
+                                <input id='FLTE' onChange={this.handleFil.bind(this, 'FLTE')} type='number'></input></li>
+                              <button className="btn btn-xs btn-primary pull-right xs-mt-10 xs-mr-5 filterCheckBtn" onClick={this.filterOcrList.bind(this, '', 'fields', '')}><i className="fa fa-check"></i></button>
                             </ul>
                           </th>
-                          <th class="dropdown" >
-                            <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Confidence Level" aria-expanded="true">
-                              <span>ACCURACY</span> <b class="caret"></b>
+                          <th className="dropdown" >
+                            <a href="#" data-toggle="dropdown" className="dropdown-toggle cursor" title="Confidence Level" aria-expanded="true">
+                              <span>ACCURACY</span> <b className="caret"></b>
                             </a>
-                            <ul class="dropdown-menu scrollable-menu">
+                            <ul className="dropdown-menu scrollable-menu filterOptions">
                               <li><a className="cursor" onClick={this.filterOcrList.bind(this, '', 'confidence', 'reset')} name="all" data-toggle="modal" data-target="#modal_equal">All</a></li>
-                              <li><a className="equal" style={{ display: 'inline-block', width: 101 }}>Equal to</a>
-                                <input className='confidence filter_input pull-right xs-mr-5' id='CEQL' onChange={this.handleFil.bind(this, 'CEQL')} type='number' ></input></li>
-                              <li><a className="greater" style={{ display: 'inline-block', width: 101 }}>Greater than</a>
-                                <input className='confidence filter_input pull-right xs-mr-5' id='CGTE' onChange={this.handleFil.bind(this, 'CGTE')} type='number' ></input></li>
-                              <li><a className="less" style={{ display: 'inline-block', width: 101 }}>Less than</a>
-                                <input className='confidence filter_input pull-right xs-mr-5' id='CLTE' onChange={this.handleFil.bind(this, 'CLTE')} type='number'></input></li>
-                              <button className="btn btn-xs btn-primary filterCheckBtn pull-right xs-mt-10 xs-mr-5" onClick={this.filterOcrList.bind(this, '', 'confidence', '')}><i class="fa fa-check"></i></button>
+                              <li><a>Equal to</a>
+                                <input id='CEQL' onChange={this.handleFil.bind(this, 'CEQL')} type='number' ></input></li>
+                              <li><a>Greater than</a>
+                                <input id='CGTE' onChange={this.handleFil.bind(this, 'CGTE')} type='number' ></input></li>
+                              <li><a>Less than</a>
+                                <input id='CLTE' onChange={this.handleFil.bind(this, 'CLTE')} type='number'></input></li>
+                              <button className="btn btn-xs btn-primary filterCheckBtn pull-right xs-mt-10 xs-mr-5" onClick={this.filterOcrList.bind(this, '', 'confidence', '')}><i className="fa fa-check"></i></button>
 
                             </ul>
                           </th>
-                          {store.getState().ocr.tabActive == 'active' ? <th class="dropdown" >
-                            <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Assignee" aria-expanded="true">
-                              <span>ASSIGNEE</span> <b class="caret"></b>
+                          {store.getState().ocr.tabActive == 'active' ? <th className="dropdown" >
+                            <a href="#" data-toggle="dropdown" className="dropdown-toggle cursor" title="Assignee" aria-expanded="true">
+                              <span>ASSIGNEE</span> <b className="caret"></b>
                             </a>
-                            <ul class="dropdown-menu scrollable-menu dropdownScroll">
-                              <li><a class="cursor" onClick={this.filterOcrList.bind(this, '', 'assignee')} name='all'>All</a></li>
+                            <ul className="dropdown-menu scrollable-menu dropdownScroll">
+                              <li><a className="cursor" onClick={this.filterOcrList.bind(this, '', 'assignee')} name='all'>All</a></li>
                               {getAssigneeOptions}
                             </ul>
-                          </th> : ''}
+                          </th> : null}
                           <th>Created By</th>
                           <th>Modified By</th>
                           <th>Last Modified</th>
@@ -650,18 +641,18 @@ export class OcrTable extends React.Component {
                   </div>
                   )
                   :
-                  (<div class="panel">
-                    <div class="panel-body">
-                      <div class="xs-mt-3 xs-mb-3 text-center">
-                        <div class="icon-container">
+                  (<div className="panel">
+                    <div className="panel-body">
+                      <div className="xs-mt-3 xs-mb-3 text-center">
+                        <div className="icon-container">
                           <OcrUpload uploadMode={'mainPanel'} />
-                          <span class="class">Add a workflow by clicking on the above icon</span>
+                          <span className="class">Add a workflow by clicking on the above icon</span>
                         </div>
                       </div>
                     </div>
                   </div>)
-                  : (<img id="loading" style={{ paddingTop: 0 }} src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
-                  : (<img id="loading" style={{ paddingTop: 0 }} src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
+                  : (<img className="xs-pt-0" id="loading" src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
+                  : (<img className="xs-pt-0" id="loading" src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
                 }
                 {ShowModel}
               </div>
@@ -675,11 +666,11 @@ export class OcrTable extends React.Component {
                   </Modal.Header>
                   <Modal.Body style={{ padding: '20px 15px 25px 15px' }}>
                      <div className="row">
-                        <div class="col-sm-4">
+                        <div className="col-sm-4">
                            <img style={{ width: '100%' }} src={STATIC_URL + "assets/images/alert_warning.png"} />
                         </div>
                         <div className="col-sm-8">
-                           <h4 class="text-warning">Warning !</h4>
+                           <h4 className="text-warning">Warning !</h4>
                            <div>Are you sure you want to delete {this.state.deleteDocName} document?</div>
                            <div className="xs-mt-10">
                               <Button bsStyle="primary" onClick={this.deleteDocument}>Yes</Button>

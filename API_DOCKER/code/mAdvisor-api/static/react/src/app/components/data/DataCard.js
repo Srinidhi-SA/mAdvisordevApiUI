@@ -1,28 +1,15 @@
 import React from "react";
 import {connect} from "react-redux";
 import {Link} from "react-router-dom";
-import {push} from "react-router-redux";
-import $ from "jquery";
-import {
-    Pagination,
-    Tooltip,
-    OverlayTrigger,
-    Popover,
-    Modal,
-    Button
-} from "react-bootstrap";
-import store from "../../store";
 import {DetailOverlay} from "../common/DetailOverlay";
-import {MainHeader} from "../common/MainHeader";
-import {BreadCrumb} from "../common/BreadCrumb";
-import {getDataList, getDataSetPreview, storeSignalMeta, handleDelete, handleRename,handleShare,refreshDatasets,resetSubsetting,getAllDataList,getAllUsersList, clearDataList} from "../../actions/dataActions";
-import {fetchProductList, openDULoaderPopup, closeDULoaderPopup, storeSearchElement,storeSortElements,updateDatasetName,openShareModalAction,closeShareModalAction} from "../../actions/dataActions";
-import {open, close,triggerDataUploadAnalysis} from "../../actions/dataUploadActions";
+import { getDataSetPreview, storeSignalMeta, handleDelete, handleRename,resetSubsetting,getAllDataList,getAllUsersList, clearDataList} from "../../actions/dataActions";
+import { openDULoaderPopup, updateDatasetName,openShareModalAction} from "../../actions/dataActions";
+import {triggerDataUploadAnalysis} from "../../actions/dataUploadActions";
 import {STATIC_URL} from "../../helpers/env.js"
-import {SEARCHCHARLIMIT,getUserDetailsOrRestart,SUCCESS,INPROGRESS,HANA,MYSQL,MSSQL,HDFS,FILEUPLOAD, FAILED, statusMessages} from  "../../helpers/helper"
-import {DataUploadLoader} from "../common/DataUploadLoader";
+import {getUserDetailsOrRestart,SUCCESS,INPROGRESS,HANA,MYSQL,MSSQL,HDFS, FAILED, statusMessages} from  "../../helpers/helper"
 import Dialog from 'react-bootstrap-dialog'
 import {clearDataPreview} from "../../actions/dataUploadActions";
+import store from "../../store"
 
 var dateFormat = require('dateformat');
 
@@ -56,11 +43,13 @@ export class DataCard extends React.Component {
     
     getPreviewData(status,dataSlug) {
         if(status==FAILED){
-            bootbox.alert(statusMessages("error",this.props.data.filter(i=>(i.slug===dataSlug))[0].completed_message,"small_mascot"));            
+            bootbox.alert({
+                message:statusMessages("error",this.props.data.filter(i=>(i.slug===dataSlug))[0].completed_message,"failed_mascot"),
+                className:"fCard"
+            });
         }else{
             var that = this;
-            this.selectedData = dataSlug //e.target.id;
-            //alert(this.selectedData);
+            this.selectedData = dataSlug 
             this.props.dispatch(clearDataPreview());
             this.props.dispatch(storeSignalMeta(null, that.props.match.url));
             this.props.dispatch(getDataSetPreview(this.selectedData));
@@ -78,10 +67,7 @@ export class DataCard extends React.Component {
     openShareModal(shareItem,slug,itemType) {
         this.props.dispatch(openShareModalAction(shareItem,slug,itemType));
        }
-    closeShareModal(event) {
-        this.props.dispatch(closeShareModalAction());
-      }
-    openDataLoaderScreen(slug, percentage, message, e){
+      openDataLoaderScreen(slug, percentage, message){
         var dataUpload = {};
         dataUpload.slug = slug
         this.props.dispatch(openDULoaderPopup());
@@ -178,7 +164,7 @@ export class DataCard extends React.Component {
 								? "Stop"
 								: "Delete"}</a>
                                 </span>: ""}
-                                {data.status == "SUCCESS"? <span  className="shareButtonCenter"onClick={this.openShareModal.bind(this,data.name,data.slug,"Data")}>
+                                {data.status == "SUCCESS"? <span  className="shareButtonCenter"onClick={this.openShareModal.bind(this,data.name,data.slug,"datasets")}>
 								<a className="dropdown-item btn-primary" href="#shareCard" data-toggle="modal">
 								<i className="fa fa-share-alt"></i>&nbsp;&nbsp;{"Share"}</a>
 								</span>: ""}
@@ -204,6 +190,7 @@ export class DataCard extends React.Component {
     }
     
     componentWillUnmount(){
+        if(!store.getState().datasets.paginationFlag)
         this.props.dispatch(clearDataList())
     }
 }

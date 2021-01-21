@@ -1,9 +1,6 @@
 import React from "react";
 import {Redirect, Link, NavLink} from "react-router-dom";
-import Breadcrumb from 'react-breadcrumb';
 import {
-  resTree,
-  searchTree,
   getFirstCard,
   fetchCard,
   fetchNodeFromTree,
@@ -12,27 +9,21 @@ import {
 } from "../../helpers/processStory";
 import {connect} from "react-redux";
 import {isEmpty, subTreeSetting, getUserDetailsOrRestart} from "../../helpers/helper";
-import {MainHeader} from "../../components/common/MainHeader";
 import {Card} from "./Card";
 import store from "../../store";
-import {getSignalAnalysis, setSideCardListFlag, updateselectedL1} from "../../actions/signalActions";
+import {getSignalAnalysis, updateselectedL1} from "../../actions/signalActions";
 import {STATIC_URL,API} from "../../helpers/env.js"
 import Slider from "react-slick";
 import {getRoboDataset, getStockAnalysis,getAppsScoreSummary,getScoreSummaryInCSV,uploadStockAnalysisFlag, setLoaderFlagAction} from "../../actions/appActions";
 import {hideDataPreview} from "../../actions/dataActions";
-import {Button} from "react-bootstrap";
 import {AppsStockDataPreview} from "../apps/AppsStockDataPreview";
 import { chartdate } from "../../actions/chartActions";
-
-//import {SignalAnalysisPage} from "./signals/SignalAnalysisPage";
-//let showSubTree=false;
 
 @connect((store) => {
   return {signal: store.signals.signalAnalysis, urlPrefix: store.signals.urlPrefix, customerDataset_slug: store.apps.customerDataset_slug};
 })
 
 export class OverViewPage extends React.Component {
-
   constructor(props) {
     super(props);
     this.nextRedirect = null;
@@ -42,52 +33,21 @@ export class OverViewPage extends React.Component {
       showStockSenceDataPreview:false,
       loading:true
     }
-
   }
 
-  setSideListFlag(e) {
-    this.props.dispatch(setSideCardListFlag(e.target.className));
-  }
-  //componentWillReceiveProps(nextProps) {}
   componentWillMount() {
     if (isEmpty(this.props.signal)) {
       if (this.props.match.url.indexOf("apps-robo") != -1) {
         this.props.dispatch(getRoboDataset(this.props.match.params.slug));
       } else if (this.props.match.url.indexOf("apps-stock") != -1) {
         this.props.dispatch(getStockAnalysis(this.props.match.params.slug));
-      }else if (this.props.match.url.indexOf("apps-regression") != -1) {
-        this.props.dispatch(getAppsScoreSummary(this.props.match.params.slug));
       }
       else {
         this.props.dispatch(getSignalAnalysis(getUserDetailsOrRestart.get().userToken, this.props.match.params.slug));
       }
     }
-
   }
   componentDidMount() {
-    // var that = this;
-    // if (this.showSubTree) {
-    //   $(".sb_navigation").show();
-    //   this.showSubTree = false;
-    //   let classname = ".sb_navigation #myTab i.mAd_icons.ic_perf ~ span"
-    //   if (this.props.match.params.l1 == "Influncers")
-    //     ".sb_navigation #myTab i.mAd_icons.ic_measure ~ span"
-    //   $(classname).each(function() {
-    //     if ($(this).attr('id') == that.props.match.params.l2) {
-    //       $(this).parent().addClass('active');
-    //     } else {
-    //       $(this).parent().removeClass('active');
-    //     }
-    //   });
-    // } else {
-    //   $(".sb_navigation").hide();
-    // }
-
-    // if ($(".list-group").children().length == 1) {
-    //   $('.row-offcanvas-left').addClass('active');
-    //   $('.sdbar_switch i').removeClass('sw_on');
-    //   $('.sdbar_switch i').addClass('sw_off');
-    // }
      this.setTime = setTimeout(() => { 
       this.setState({ loading: false });       
     }, 0);  
@@ -105,23 +65,11 @@ export class OverViewPage extends React.Component {
       }}
     });
   }
-
   componentWillUnmount = () => {            
     clearTimeout(this.setTime);    
     this.props.dispatch(setLoaderFlagAction(true))  
 }; 
 
-  toggleSideList() {
-    //alert($('.row-offcanvas').attr('class'));
-    $('.row-offcanvas').toggleClass('active');
-    if ($('.row-offcanvas-left').hasClass('active')) {
-      $('.sdbar_switch i').removeClass('sw_on');
-      $('.sdbar_switch i').addClass('sw_off');
-    } else {
-      $('.sdbar_switch i').addClass('sw_on');
-      $('.sdbar_switch i').removeClass('sw_off');
-    };
-  }
 
   prevNext(path) {
     let currentSuffix = path.location.pathname;
@@ -131,31 +79,24 @@ export class OverViewPage extends React.Component {
     let expectedURL = getPrevNext(this.props.signal, currentSuffix);
     return expectedURL;
   }
-
   redirectPush(url) {
     this.props.history.push(url);
   }
-
-  
   showStockSenceDataPreview(){
     this.setState({showStockSenceDataPreview:!this.state.showStockSenceDataPreview})
   }
   closeDocumentMode() {
-    this.props.dispatch(hideDataPreview());
-    if(this.urlPrefix.indexOf("apps-regression") != -1)
-    this.props.history.push("/apps-regression/scores")
-    else if(this.props.match.url.indexOf("apps-robo") != -1)
-    this.props.history.push("/apps-robo")
+    this.props.dispatch(hideDataPreview()); 
+    if(this.props.match.url.indexOf("apps-robo") != -1)
+      this.props.history.push("/apps-robo")
     else if (this.props.match.url.indexOf("apps-stock") != -1){
-    this.props.dispatch(uploadStockAnalysisFlag(false))
-    this.props.history.push("/apps-stock-advisor")
-    }
-    else
-    this.props.history.push("/signals");
-
+      this.props.dispatch(uploadStockAnalysisFlag(false))
+      this.props.history.push("/apps-stock-advisor")
+    }else
+      window.location.pathname = "/signals"
   }
   gotoScoreData(){
-      this.props.dispatch(getScoreSummaryInCSV(store.getState().apps.scoreSlug))
+    this.props.dispatch(getScoreSummaryInCSV(store.getState().apps.scoreSlug))
   }
 
   render() {
@@ -185,15 +126,13 @@ export class OverViewPage extends React.Component {
       return (
         <img id="loading" src={STATIC_URL + "assets/images/Preloader_2.gif"}/>
       );
-    }
-    else{
-      if (isEmpty(this.props.signal)) {
+    }else{
+      if(isEmpty(this.props.signal)) {
         return (
           <div className="side-body">
             <div className="page-head">
               <div class="row">
-                <div class="col-md-12">
-                </div>
+                <div class="col-md-12"></div>
                 <div class="col-md-8">
                   <h2>{storyName}</h2>
                 </div>
@@ -208,17 +147,14 @@ export class OverViewPage extends React.Component {
       } else {
         let regression_app=false;
         let stock_sense_app = false;
-        if(that.urlPrefix.indexOf("apps-regression") != -1)
-          regression_app=true;
         if(that.urlPrefix.indexOf("/apps-stock-advisor") != -1)
           stock_sense_app=true;
-        if ((regression_app || stock_sense_app) && !this.props.match.params.l1) {
+        if ((stock_sense_app) && !this.props.match.params.l1) {
           var url=that.urlPrefix+"/"+this.props.match.params.slug+"/"+this.props.signal.listOfNodes[0].slug
          return(<Redirect to ={url}/>)
         }
         
         let urlSplit = this.props.location.pathname.split("/");
-        let selectedSignal = storyName;
         let tabList = null;
         let varList = null;
         let cardList = null;
@@ -252,10 +188,8 @@ export class OverViewPage extends React.Component {
               cardLink = that.urlPrefix + "/" + params.slug + "/" + params.l1 + "/"+ level2+"/"+ card.slug
             }
           }
-       
           return (<Redirect to={cardLink}/>);
-        } else {
-       
+        }else {
           card = fetchCard(params, this.props.signal);
           if (params.l3 && params.l3 == "$") {
             let cardLink = that.urlPrefix + "/" + params.slug + "/" + params.l1 + "/" + params.l2 + "/" + card.slug;
@@ -290,6 +224,7 @@ export class OverViewPage extends React.Component {
         let selectedNode = null;
         let selectedNode_slug = null;
         let selectedURL = ""
+        let hideListOfAnalysis = true;
         if (Object.keys(params).length == 3) {
           selectedNode_slug = params.l1;
           selectedURL = that.urlPrefix + "/" + params.slug + "/" + params.l1;
@@ -300,7 +235,7 @@ export class OverViewPage extends React.Component {
        
         selectedNode = fetchNodeFromTree(selectedNode_slug, this.props.signal);
         if(selectedNode.listOfCards.length!=1) {
-          $("#sticky-container").removeClass("hidden");
+          hideListOfAnalysis = false;
           cardList = selectedNode.listOfCards.map((card, i) => {
             let selectedLink = selectedURL + "/" + card.slug;
             return (
@@ -316,8 +251,6 @@ export class OverViewPage extends React.Component {
           documentModeLink = "/signaldocumentMode/" + this.props.match.params.slug;
         } else if (that.urlPrefix.indexOf("stock") != -1) {
           documentModeLink = "/apps-stock-document-mode/"+this.props.match.params.slug;
-        } else if (regression_app) {
-          documentModeLink = "/apps-regression-score-document/"+this.props.match.params.slug;
         } else {
           documentModeLink = "/apps-robo-document-mode/" + this.props.match.params.slug;
         }
@@ -332,8 +265,6 @@ export class OverViewPage extends React.Component {
             if (this.props.signal.listOfCards[0].slug) {
               prevURL = that.urlPrefix + "/" + this.props.match.params.slug;
             }
-          }else if (regression_app) {
-            prevURL="/apps-regression/scores"
           }else {
             prevURL = that.urlPrefix;
           }
@@ -353,7 +284,6 @@ export class OverViewPage extends React.Component {
         }
 
         let lastcard = getLastCardOfTree(this.props.signal);
-       
         let nameLink = that.urlPrefix + "/" + this.props.match.params.slug;
         if (that.urlPrefix == "/apps-robo") {
           nameLink = that.urlPrefix + "-list" + "/" + this.props.match.params.slug + "/customer" + "/data/" + store.getState().apps.customerDataset_slug;
@@ -365,35 +295,29 @@ export class OverViewPage extends React.Component {
         if(l1Name=="Influencers")
           classname=".sb_navigation #subTab i.mAd_icons.ic_measure ~ span"
         subTreeSetting(urlSplit.length, 6, that.props.match.params.l2,classname); // setting of subtree and active classes
-
-        if(regression_app){
-          var scoreDownloadURL=API+'/api/get_score_data_and_return_top_n/?url='+store.getState().apps.scoreSlug+'&download_csv=true&count=100'
-          var scoreDataLink = "/apps/regression-app-6u8ybu4vdr/analyst/scores/"+store.getState().apps.scoreSlug+"/dataPreview";
-        }
         return (
           <div>
             {this.state.showStockSenceDataPreview?
             <AppsStockDataPreview  history={this.props.history} match={this.props.match} showPreview={true} updatePreviewState={this.showStockSenceDataPreview.bind(this)}/>
-          :
+            :
             <div className="side-body">		 
               <div className="page-head overViewHead">
-                  <div class="col-md-12">
+                <div class="col-md-12">
                   <h3 className="xs-mt-0 xs-mb-0"> {storyName}
-                  <div className="btn-toolbar pull-right">
-                    <div className="btn-group summaryIcons">
-                      <div className="btn btn-default sticky-container hidden-xs hidden" id="sticky-container">
-                        <button type="button" data-toggle="dropdown" class="btn btn-primary btn-round btn-xs" title="List of Analysis">
-                          <i class="fa fa-list-ul"></i>
-                        </button>
-                        <ul role="menu" class="dropdown-menu">
-                          {cardList}
-                        </ul>
-                      </div>
-                      {/*<button type="button" className="btn btn-default" disabled="true" title="Card mode"><i className="fa fa-print"></i></button>*/}
-                      {(this.props.match.url.indexOf('/apps-stock-advisor') >= 0) ?
-                        <button type="button" className="btn btn-default" onClick={this.showStockSenceDataPreview.bind(this)} title="Show Data Preview">
-                          <i class="zmdi zmdi-hc-lg zmdi-grid"></i>
-                        </button>:""}
+                    <div className="btn-toolbar pull-right">
+                      <div className="btn-group summaryIcons">
+                        <div className={"btn btn-default sticky-container hidden-xs " +(hideListOfAnalysis?"hidden":"")} id="sticky-container">
+                          <button type="button" data-toggle="dropdown" class="btn btn-primary btn-round btn-xs" title="List of Analysis">
+                            <i class="fa fa-list-ul"></i>
+                          </button>
+                          <ul role="menu" class="dropdown-menu">
+                            {cardList}
+                          </ul>
+                        </div>
+                        {(this.props.match.url.indexOf('/apps-stock-advisor') >= 0) &&
+                          <button type="button" className="btn btn-default" onClick={this.showStockSenceDataPreview.bind(this)} title="Show Data Preview">
+                            <i class="zmdi zmdi-hc-lg zmdi-grid"></i>
+                        </button>}
                         <button type="button" className="btn btn-default" disabled="true" title="Card mode">
                           <i class="zmdi zmdi-hc-lg zmdi-view-carousel"></i>
                         </button>
@@ -405,78 +329,65 @@ export class OverViewPage extends React.Component {
                           }} title="Document mode">
                           <i class="zmdi zmdi-hc-lg zmdi-view-web"></i>
                         </Link>
-                        {/*<Link className="continue" to={that.urlPrefix}>*/}
                         <button type="button" className="btn btn-default" onClick={this.closeDocumentMode.bind(this)}>
                           <i class="zmdi zmdi-hc-lg zmdi-close"></i>
                         </button>
-                        {/*</Link>*/}
                       </div>
                     </div>
                   </h3>
-                  </div>
-                  <div class="clearfix"></div>
-                  </div>
-                
-                  <div className="main-content">
-                    <div className="row">
-                      <div className="col-md-12">
-                        <div className="clearfix"></div>
-                          <div className="panel panel-mAd box-shadow" data-wow-duration="1s" data-wow-delay="1s" style={{marginTop:"55px"}}>
-                            <div className="panel-heading"></div>
-                            <div className="panel-body no-border">
-                              <div className="card full-width-tabs">
-                                <ul className="nav nav-tabs" id="guide-tabs" role="tablist">
-                                  {tabList}
-                                </ul>
-                                {/* Tab panes */}
-                                <div className="tab-content">
+                </div>
+                <div class="clearfix"></div>
+              </div>
+              <div className="main-content">
+                <div className="row">
+                  <div className="col-md-12">
+                    <div className="clearfix"></div>
+                      <div className="panel panel-mAd box-shadow" data-wow-duration="1s" data-wow-delay="1s" style={{marginTop:"55px"}}>
+                        <div className="panel-heading"></div>
+                          <div className="panel-body no-border">
+                            <div className="card full-width-tabs">
+                              <ul className="nav nav-tabs" id="guide-tabs" role="tablist">
+                                {tabList}
+                              </ul>
+                              <div className="tab-content">
                                 { varList!=null &&
-                                  <div className="sb_navigation">
-                                    <div id="subTab" style={{paddingTop:"15px"}}>
-                                      <Slider ref='slider' {...settings}>{varList}</Slider>
-                                    </div>
-                                    <div className="clearfix"></div>
+                                <div className="sb_navigation">
+                                  <div id="subTab" style={{paddingTop:"15px"}}>
+                                    <Slider ref='slider' {...settings}>{varList}</Slider>
                                   </div>
+                                  <div className="clearfix"></div>
+                                </div>}
+                                <div className="content_scroll container-fluid">
+                                  <div className="row">
+                                    <div className="col-xs-12 content ov_card_boxes">
+                                      <Card cardData={card.cardData} cardWidth={card.cardWidth}/>
+                                  </div>
+                                  <div className="clearfix"></div>
+                                </div>
+                              </div>
+                              <Link className="tabs-control left grp_legends_green back" to={prevURL}>
+                                <span className="fa fa-chevron-left"></span>
+                              </Link>
+                              <Link onClick={this.redirectPush.bind(this)} className="tabs-control right grp_legends_green continue" to={{
+                                pathname: nextURL,
+                                state: {
+                                  lastVar: card.slug
                                 }
-                                  <div className="content_scroll container-fluid">
-                                    <div className="row">
-                                      {/*/span*/}
-                                      <div className="col-xs-12 content ov_card_boxes">
-                                        <Card cardData={card.cardData} cardWidth={card.cardWidth}/>
-                                      </div>
-                                   
-                                      <div className="clearfix"></div>
-                                    </div>
-                                  </div>
-                                  <Link className="tabs-control left grp_legends_green back" to={prevURL}>
-                                    <span className="fa fa-chevron-left"></span>
-                                  </Link>
-                                  <Link onClick={this.redirectPush.bind(this)} className="tabs-control right grp_legends_green continue" to={{
-                                    pathname: nextURL,
-                                    state: {
-                                      lastVar: card.slug
-                                    }
-                                  }}>
-                                    <span className="fa fa-chevron-right"></span>
-                          </Link>
-                         <div className="col-md-12 text-right">
-                         {(regression_app)?<div>
-                         <Link to={scoreDataLink} onClick={this.gotoScoreData.bind(this)} className="btn btn-primary xs-pr-10">View Scored Data</Link>
-                         <a  href={scoreDownloadURL} id="download" className="btn btn-primary" download>Download Score</a></div>:""}
-                        </div>
+                              }}>
+                                <span className="fa fa-chevron-right"></span>
+                              </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
+            }
           </div>
-          }
-        </div>
-      );
+        );
+      }
     }
-  }
   }
 }

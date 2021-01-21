@@ -8,8 +8,8 @@ import {openShareModalAction,closeShareModalAction,fetchModelEdit,getDataSetPrev
 import {MainHeader} from "../common/MainHeader";
 import {Tabs,Tab,Pagination,Tooltip,OverlayTrigger,Popover} from "react-bootstrap";
 import {AppsCreateModel} from "./AppsCreateModel";
-import {getAppsModelList,getAppsModelSummary,updateModelSlug,updateScoreSummaryFlag,
-    updateModelSummaryFlag,handleModelDelete,handleModelRename,storeModelSearchElement,storeAppsModelSortElements,openAppsLoader,createModelSuccessAnalysis, showCreateModalPopup, clearModelList} from "../../actions/appActions";
+import {getAppsModelList,updateModelSlug,
+    handleModelDelete,handleModelRename,openAppsLoader,createModelSuccessAnalysis, showCreateModalPopup, clearModelList, clearModelSummary} from "../../actions/appActions";
     import {DetailOverlay} from "../common/DetailOverlay";
     import {SEARCHCHARLIMIT,getUserDetailsOrRestart,SUCCESS,INPROGRESS, FAILED, statusMessages} from  "../../helpers/helper"
     import {STATIC_URL} from "../../helpers/env.js";
@@ -52,7 +52,10 @@ import {getAppsModelList,getAppsModelSummary,updateModelSlug,updateScoreSummaryF
         }
         getFailedMsg(status,itemSlug) {
             if(status==FAILED){
-                bootbox.alert(statusMessages("error",this.props.data.filter(i=>(i.slug==itemSlug))[0].completed_message,"small_mascot"));            
+                bootbox.alert({
+                    message:statusMessages("error",this.props.data.filter(i=>(i.slug==itemSlug))[0].completed_message,"failed_mascot"),
+                    className:"fCard"
+                });
             }
             else
                 return;
@@ -149,7 +152,7 @@ import {getAppsModelList,getAppsModelSummary,updateModelSlug,updateScoreSummaryF
                                 : "Delete"}</a>
                             </span>:""}
                             <div style={{display:'flex',justifyContent:'center',width: '100%'}}>
-                            {data.status == "SUCCESS"? <span  className="shareButton"onClick={this.openShareModal.bind(this,data.name,data.slug,"Model")}>
+                            {data.status == "SUCCESS"? <span  className="shareButton"onClick={this.openShareModal.bind(this,data.name,data.slug,"trainer")}>
 								<a className="dropdown-item btn-primary" href="#shareCard" data-toggle="modal">
 								<i className="fa fa-share-alt"></i>&nbsp;&nbsp;{"Share"}</a>
                                 </span>: ""} 
@@ -185,6 +188,9 @@ import {getAppsModelList,getAppsModelSummary,updateModelSlug,updateScoreSummaryF
               
         }
         componentWillUnmount(){
-            this.props.dispatch(clearModelList())
+            if(!store.getState().datasets.paginationFlag){
+                this.props.dispatch(clearModelList());
+                this.props.dispatch(clearModelSummary());
+            }
         }
     }

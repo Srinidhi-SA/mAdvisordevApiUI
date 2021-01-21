@@ -7,8 +7,8 @@ import {push} from "react-router-redux";
 import {MainHeader} from "../common/MainHeader";
 import {Tabs,Tab,Pagination,Tooltip,OverlayTrigger,Popover} from "react-bootstrap";
 import {AppsCreateModel} from "./AppsCreateModel";
-import {getAppsModelList,getAppsAlgoList,getAppsModelSummary,updateModelSlug,updateScoreSummaryFlag,
-    updateModelSummaryFlag,handleModelDelete,handleModelRename,storeModelSearchElement,storeAppsModelSortElements,getAppDetails,refreshAppsAlgoList,refreshAppsModelList,getAllModelList,storeAppsModelFilterElement, clearAppsAlgoList} from "../../actions/appActions";
+import {getAppsModelList,updateModelSlug,
+    updateModelSummaryFlag,handleModelDelete,handleModelRename,storeModelSearchElement,storeAppsModelSortElements,getAppDetails,refreshAppsModelList,getAllModelList,storeAppsModelFilterElement, clearAppsAlgoList} from "../../actions/appActions";
 import {paginationFlag, updateSelectedVariablesAction} from "../../actions/dataActions";
 import {DetailOverlay} from "../common/DetailOverlay";
 import {SEARCHCHARLIMIT,getUserDetailsOrRestart} from  "../../helpers/helper"
@@ -41,7 +41,16 @@ var dateFormat = require('dateformat');
         }
         componentWillMount() {
             var pageNo = 1;
-            if(this.props.history.location.search.indexOf("page") != -1){
+            if(this.props.history.location.search!=""){
+                let urlParams = new URLSearchParams(this.props.history.location.search);
+                pageNo = (urlParams.get("page")!="")?urlParams.get("page"):pageNo
+                let searchELem = (urlParams.get('search')!=null)?urlParams.get('search'):"";
+                let sortELem = (urlParams.get('sort')!=null)?urlParams.get('sort'):"";
+                let sortType = (urlParams.get('type')!=null)?urlParams.get('type'):"";
+                this.props.dispatch(storeModelSearchElement(searchELem));
+                this.props.dispatch(storeAppsModelSortElements(sortELem,sortType));
+                this.props.dispatch(getAppsModelList(pageNo));
+            }else if(this.props.history.location.search.indexOf("page") != -1){
                 pageNo = this.props.history.location.search.split("page=")[1];
             }
             if(store.getState().apps.currentAppId == ""){
@@ -49,24 +58,12 @@ var dateFormat = require('dateformat');
             }else{
                 this.props.dispatch(getAppsModelList(pageNo));
             }
-            var pageNo = 1; //if removing,getting error in mm map because mm is dependent on this page
-            if(this.props.history.location.search.indexOf("page") != -1){
-                pageNo = this.props.history.location.search.split("page=")[1];
-            }
-            if(store.getState().apps.currentAppId == ""){
-                this.props.dispatch(getAppDetails(this.props.match.params.AppId,pageNo));
-            }
-            //removing getAppsAlgoList call as we have it in ModelManagement component and making algoList empty
-            // else{
-            //     this.props.dispatch(getAppsAlgoList(pageNo));
-            // }
             this.props.dispatch(clearAppsAlgoList())
-           this.props.dispatch(updateModelSummaryFlag(false));
-           this.props.dispatch(updateSelectedVariablesAction(false));
+            this.props.dispatch(updateModelSummaryFlag(false));
+            this.props.dispatch(updateSelectedVariablesAction(false));
         }
         componentDidMount(){
             this.props.dispatch(refreshAppsModelList(this.props));
-            // this.props.dispatch(refreshAppsAlgoList(this.props));
            this.props.dispatch(getAllModelList(store.getState().apps.currentAppId));
            this.props.dispatch(storeModelSearchElement(""));
             this.props.dispatch(storeAppsModelSortElements("",""));
@@ -100,8 +97,8 @@ var dateFormat = require('dateformat');
                 this.props.dispatch(getAppsModelList(1));
                 
             }else if (e.target.value.length > SEARCHCHARLIMIT) {
-                if($(".mode_filter").val()!=""&& this.props.mode_filter_by != null){
-                this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?mode='+$(".mode_filter").val()+'/search=' + e.target.value + '')
+                if($(".mode_filter").val()!=""&& $(".mode_filter").val()!=null && this.props.mode_filter_by != null){
+                this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?mode='+$(".mode_filter").val()+'/&search=' + e.target.value + '')
                 }
                 else{
                 this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?search=' + e.target.value + '')
@@ -118,8 +115,8 @@ var dateFormat = require('dateformat');
         doSorting(sortOn, type){
             this.props.dispatch(storeModelSearchElement(""));
             var modeSelected= store.getState().apps.analystModeSelectedFlag?'/analyst' :'/autoML';
-            if($(".mode_filter").val()){
-             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected+'/models?mode=' + $(".mode_filter").val() + '/models?sort=' + sortOn + '&type='+type);
+            if($(".mode_filter").val()!=""&& $(".mode_filter").val()!=null && this.props.mode_filter_by != null){
+                this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected+'/models?mode=' + $(".mode_filter").val() + '/models?sort=' + sortOn + '&type='+type);
             }
              else{
             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected+'/models?sort=' + sortOn + '&type='+type);
@@ -132,10 +129,10 @@ var dateFormat = require('dateformat');
             var modeSelected= store.getState().apps.analystModeSelectedFlag?'/analyst' :'/autoML';
             
             this.props.dispatch(storeAppsModelFilterElement($(".mode_filter").val()));
-            if(this.props.model_search_element && $(".mode_filter").val()!=""&&this.props.mode_filter_by != null){
+            if(this.props.model_search_element && $(".mode_filter").val()!="" && $(".mode_filter").val()!=null &&this.props.mode_filter_by != null){
                 this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?mode=' + $(".mode_filter").val() +'/models?search=' + this.props.model_search_element + '')
             }
-            else if($(".mode_filter").val()!=""&&this.props.mode_filter_by != null){
+            else if($(".mode_filter").val()!="" && $(".mode_filter").val()!=null && this.props.mode_filter_by != null){
             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected+'/models?mode=' + $(".mode_filter").val());
             }
             else if($(".mode_filter").val()==""&& this.props.model_search_element){
@@ -183,7 +180,7 @@ var dateFormat = require('dateformat');
                         {/*<input type="text" name="model_insights" onKeyPress={this._handleKeyPress.bind(this)} onChange={this.onChangeOfSearchBox.bind(this)} title="Model Insights" id="model_insights" className="form-control" placeholder="Search Model insights..."/>*/}
                         
                         <div className="search-wrapper">
-                        <input type="text" name="model_insights" value={this.props.model_search_element} onKeyPress={this._handleKeyPress.bind(this)} onChange={this.onChangeOfSearchBox.bind(this)} title="Model Insights" id="model_insights" className="form-control search-box" placeholder="Search Model insights..." required />
+                        <input type="text" name="model_insights" defaultValue={this.props.model_search_element} onKeyPress={this._handleKeyPress.bind(this)} onChange={this.onChangeOfSearchBox.bind(this)} title="Model Insights" id="model_insights" className="form-control search-box" placeholder="Search Model insights..." required />
                         <span className="zmdi zmdi-search form-control-feedback"></span>
                         <button className="close-icon" type="reset" onClick={this.clearSearchElement.bind(this)}></button>
                         </div>
@@ -254,10 +251,10 @@ var dateFormat = require('dateformat');
             this.props.dispatch(paginationFlag(true))
             var modeSelected= store.getState().apps.analystModeSelectedFlag?'/analyst' :'/autoML'
             if (this.props.model_search_element) {
-                this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?search=' + this.props.model_search_element+'?page='+eventKey+'')
+                this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?search=' + this.props.model_search_element+'&page='+eventKey+'')
             }  else if(this.props.apps_model_sorton){
                 this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?sort=' + this.props.apps_model_sorton +'&type='+this.props.apps_model_sorttype+'&page=' + eventKey + '');
-            }else if(this.props.mode_filter_by){
+            }else if(this.props.mode_filter_by!="" && this.props.mode_filter_by!=null){
                 this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?filllter=' + this.props.mode_filter_by +'&type='+this.props.apps_model_sorttype+'&page=' + eventKey + '');
             }else
                 this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?page='+eventKey+'')
@@ -268,12 +265,18 @@ var dateFormat = require('dateformat');
             this.props.dispatch(storeAppsModelSortElements("",""));
 
             var modeSelected= store.getState().apps.analystModeSelectedFlag?'/analyst' :'/autoML'
-            if(this.props.mode_filter_by)
+            if(this.props.mode_filter_by!="" && this.props.mode_filter_by!=null)
             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?mode='+ this.props.mode_filter_by);
             else if(this.props.apps_model_sorton)
             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models?sort='+ this.props.apps_model_sorton +'&type='+this.props.apps_model_sorttype);
             else
             this.props.history.push('/apps/'+this.props.match.params.AppId+ modeSelected +'/models');
             this.props.dispatch(getAppsModelList(1));
+        }
+
+        componentWillUnmount(){
+            this.props.dispatch(storeModelSearchElement(""));
+            this.props.dispatch(storeAppsModelSortElements("",""));
+            this.props.dispatch(storeAppsModelFilterElement(""))
         }
     }

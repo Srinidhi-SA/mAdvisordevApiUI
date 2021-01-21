@@ -6,7 +6,7 @@ import { CREATEMODEL, CREATESCORE, CREATESIGNAL, isEmpty, MINROWINDATASET, showH
 import store from "../../store";
 import { DataValidation } from "./DataValidation";
 import { Button } from "react-bootstrap";
-import { getAllDataList, getDataList, getDataSetPreview, hideDataPreview, hideDataPreviewDropDown, makeAllVariablesTrueOrFalse, saveSelectedColSlug } from "../../actions/dataActions";
+import { clearSubset, getAllDataList, getDataList, getDataSetPreview, getValueOfFromParam, hideDataPreview, hideDataPreviewDropDown, makeAllVariablesTrueOrFalse, popupAlertBox, saveSelectedColSlug, selDatetimeCol, selDimensionCol, selMeasureCol, setAlreadyUpdated, setDatetimeColValues, setDimensionColValues, setMeasureColValues } from "../../actions/dataActions";
 import { getAppDetails, hideDataPreviewRightPanels, saveSelectedValuesForModel } from "../../actions/appActions";
 import { fromVariableSelectionPage, resetSelectedTargetVariable } from "../../actions/signalActions";
 import { clearDataPreview, clearLoadingMsg, dataSubsetting } from "../../actions/dataUploadActions";
@@ -24,6 +24,7 @@ import { DataUploadLoader } from "../common/DataUploadLoader";
     allDataList:store.datasets.allDataSets,
     createSigLoaderFlag : store.datasets.createSigLoaderFlag,
     dataTransformSettings : store.datasets.dataTransformSettings,
+    updatedSubSetting: store.datasets.updatedSubSetting,
   };
 })
 
@@ -39,8 +40,9 @@ export class DataPreview extends React.Component {
   }
 
   componentWillMount() {
+    this.props.dispatch(clearSubset())
     this.props.dispatch(getAllDataList());
-    const from = this.getValueOfFromParam();
+    const from = getValueOfFromParam();
     if (from === 'createSignal') {
       if (this.props.match.path.includes("slug")&& this.props.match.path.includes("data")) {
         this.buttons['close'] = {
@@ -65,27 +67,27 @@ export class DataPreview extends React.Component {
     }else{
       this.props.dispatch(getDataList(1));
       if(this.props.dataPreview == null || isEmpty(this.props.dataPreview) || this.props.dataPreview.status == 'FAILED') {
-        // this.props.dispatch(getDataSetPreview(this.props.match.params.slug)); //dataPreview call made again, be to tested again
+        this.props.dispatch(getDataSetPreview(this.props.match.params.slug)); //Called on refreshing data preview
       }
       if(this.props.match.path.includes("AppId")) {
         this.props.dispatch(getAppDetails(this.props.match.params.AppId));
       }
       if(this.props.match.path.includes("models") && this.props.match.path.includes("modelSlug") && this.props.match.path.includes("slug")) {
+        let modeSelected =  window.location.pathname.includes("analyst")?"/analyst":"/autoML"
         this.buttons['close'] = {
-          url: "/apps",
+          url: "/apps/"+this.props.match.params.AppId+modeSelected+"/models",
           text: "Close"
         };
-        let modeSelected =  window.location.pathname.includes("analyst")?"/analyst":"/autoML"
         this.buttons['create'] = {
           url: "/apps/" + this.props.match.params.AppId + modeSelected+ "/models/" + this.props.match.params.modelSlug + "/data/" + this.props.match.params.slug + "/createScore",
           text: CREATESCORE
         };
       }else if(this.props.match.path.includes("models") && this.props.match.path.includes("slug")){
+        let modeSelected =  window.location.pathname.includes("analyst")?"/analyst":"/autoML"
         this.buttons['close'] = {
-          url: "/apps",
+          url: "/apps/"+this.props.match.params.AppId+modeSelected+"/models",
           text: "Close"
         };
-        let modeSelected =  window.location.pathname.includes("analyst")?"/analyst":"/autoML"
         this.buttons['create'] = {
           url: "/apps/" + this.props.match.params.AppId + modeSelected+"/models/data/" + this.props.match.params.slug + "/createModel",
           text: CREATEMODEL
@@ -128,7 +130,6 @@ export class DataPreview extends React.Component {
   componentDidMount() {
     showHideSideTable(this.firstTimeSideTable);
     showHideSideChart(this.firstTimeColTypeForChart, this.firstTimeSideChart);
-    // hideDataPreviewDropDown(this.props.curUrl); //causing error
   }
 
   componentWillUpdate() {
@@ -151,15 +152,6 @@ export class DataPreview extends React.Component {
     }
     if(this.props.match.path.includes("apps-stock-advisor")){
       hideDataPreviewRightPanels();
-    }
-  }
-
-  getValueOfFromParam() {
-    if(this.props.location === undefined){
-
-    }else{
-      const params = new URLSearchParams(this.props.location.search);
-      return params.get('from');
     }
   }
 
@@ -251,6 +243,50 @@ export class DataPreview extends React.Component {
         $(".visualizeLoader")[0].style.display = ""
       }
       this.props.dispatch(saveSelectedColSlug(slug));
+      this.props.dispatch(setAlreadyUpdated(false));
+      let colData = this.props.dataPreview.meta_data.uiMetaData.columnDataUI.filter(i=>i.slug===slug)[0];
+    if(colData.columnType === "measure"){
+      colData.columnStats.map((stats) => {
+        if(stats.name == "min"){
+          this.props.dispatch(setMeasureColValues("min",stats.value));
+          this.props.dispatch(setMeasureColValues("curMin",stats.value));
+        }else if(stats.name == "max"){
+          this.props.dispatch(setMeasureColValues("max",stats.value));
+          this.props.dispatch(setMeasureColValues("curMax",stats.value));
+        }
+      });
+      this.props.dispatch(setMeasureColValues("textboxUpdated",false));
+      if(this.props.updatedSubSetting.measureColumnFilters.length>0 && this.props.updatedSubSetting.measureColumnFilters.filter(i=>i.colname===colData.name).length>0){
+        this.props.dispatch(selMeasureCol(colData.name));
+        this.props.dispatch(setAlreadyUpdated(true));
+      }
+    }else if(colData.columnType === "dimension"){
+      colData.columnStats.map((stats) => {
+        if(stats.name == "LevelCount"){
+          this.props.dispatch(setDimensionColValues("dimensionList",stats.value))
+          this.props.dispatch(setDimensionColValues("curDimensionList",Object.keys(stats.value)))
+          this.props.dispatch(setDimensionColValues("selectedDimensionList",Object.keys(stats.value)))
+        }
+      });
+      if(this.props.updatedSubSetting.dimensionColumnFilters.length>0 && this.props.updatedSubSetting.dimensionColumnFilters.filter(i=>i.colname===colData.name).length>0){
+        this.props.dispatch(selDimensionCol(colData.name));
+        this.props.dispatch(setAlreadyUpdated(true));
+      }
+    }else if(colData.columnType === "datetime"){
+      colData.columnStats.map((stats) => {
+        if(stats.name === "firstDate"){
+          this.props.dispatch(setDatetimeColValues("startDate",stats.value));
+          this.props.dispatch(setDatetimeColValues("curstartDate",stats.value));
+        }else if(stats.name == "lastDate"){
+          this.props.dispatch(setDatetimeColValues("endDate",stats.value));
+          this.props.dispatch(setDatetimeColValues("curendDate",stats.value)); 
+        }
+      });
+      if(this.props.updatedSubSetting.timeDimensionColumnFilters.length>0 && this.props.updatedSubSetting.timeDimensionColumnFilters.filter(i=>i.colname===colData.name).length>0){
+        this.props.dispatch(selDatetimeCol(colData.name));
+        this.props.dispatch(setAlreadyUpdated(true));
+      }
+    }
     }
   }
 
@@ -282,10 +318,8 @@ export class DataPreview extends React.Component {
         return(
           <div>
             <img id="loading" src={STATIC_URL + "assets/images/Preloader_2.gif"}/>
-            <div>
-              <div className="text-center text-muted">
-                <h3>Please wait while loading...</h3>
-              </div>
+            <div className="text-center text-muted">
+              <h3>Please wait while loading...</h3>
             </div>
           </div>
         );
@@ -572,7 +606,7 @@ export class DataPreview extends React.Component {
                   </div>
                 </div>
               </div>
-            <DataValidationEditValues/> {/* column rename dialog */}
+            <DataValidationEditValues/>
             <DataUploadLoader/>
           </div>
         );

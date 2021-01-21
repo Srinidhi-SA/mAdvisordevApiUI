@@ -97,6 +97,12 @@ export default function reducer(state = {
   userTablePagesize:12,
   reviewerTablePagesize:12,
   userDeleteFlag: false,
+  customImgPath: "",
+  customImageName:"",
+  labelsList:[],
+  pdfSize:1,
+  pdfNumber:1,
+  pdfDoc: false,
 
 }, action) {
   switch (action.type) {
@@ -282,6 +288,7 @@ export default function reducer(state = {
           ...state,
           originalImgPath: action.data.imagefile ,
           ocrImgPath: action.data.generated_image,
+          customImgPath: action.data.generated_image,
           imageSlug: action.data.slug,
           imageTaskId: taskId,
           is_closed: close,
@@ -289,8 +296,20 @@ export default function reducer(state = {
           classification: classificationVal,
           ocrImgHeight: action.data.height,
           ocrImgWidth: action.data.width,
+          customImageName: action.data.image_name,
+          labelsList: action.data.labels_list,
         }
       }
+      break;
+      case "PDF_PAGINATION":
+        {
+        return{
+          ... state,
+          pdfSize: action.data.total_number_of_pages,
+          pdfNumber: action.data.current_page,
+          pdfDoc: true,
+        }
+        }
       break;
       case "CLOSE_FLAG":
         {
@@ -319,6 +338,7 @@ export default function reducer(state = {
             is_closed:"",
             template: [],
             classification: "",
+            pdfDoc: false,
           }
         }
         break;
@@ -330,6 +350,14 @@ export default function reducer(state = {
           }
         }
         break;
+        case "UPDATE_CUSTOM_IMAGE":
+          {
+            return {
+              ...state,
+              customImgPath: action.data + "?" +new Date().getTime(),
+            }
+          }
+          break;
     case "OCR_FILES_SORT":
       {
         return {

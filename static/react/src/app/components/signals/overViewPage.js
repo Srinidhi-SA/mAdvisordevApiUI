@@ -1,8 +1,6 @@
 import React from "react";
 import {Redirect, Link, NavLink} from "react-router-dom";
 import {
-  resTree,
-  searchTree,
   getFirstCard,
   fetchCard,
   fetchNodeFromTree,
@@ -13,16 +11,13 @@ import {connect} from "react-redux";
 import {isEmpty, subTreeSetting, getUserDetailsOrRestart} from "../../helpers/helper";
 import {Card} from "./Card";
 import store from "../../store";
-import {getSignalAnalysis, setSideCardListFlag, updateselectedL1} from "../../actions/signalActions";
+import {getSignalAnalysis, updateselectedL1} from "../../actions/signalActions";
 import {STATIC_URL,API} from "../../helpers/env.js"
 import Slider from "react-slick";
 import {getRoboDataset, getStockAnalysis,getAppsScoreSummary,getScoreSummaryInCSV,uploadStockAnalysisFlag, setLoaderFlagAction} from "../../actions/appActions";
 import {hideDataPreview} from "../../actions/dataActions";
 import {AppsStockDataPreview} from "../apps/AppsStockDataPreview";
 import { chartdate } from "../../actions/chartActions";
-
-//import {SignalAnalysisPage} from "./signals/SignalAnalysisPage";
-//let showSubTree=false;
 
 @connect((store) => {
   return {signal: store.signals.signalAnalysis, urlPrefix: store.signals.urlPrefix, customerDataset_slug: store.apps.customerDataset_slug};
@@ -40,17 +35,12 @@ export class OverViewPage extends React.Component {
     }
   }
 
-  setSideListFlag(e) {
-    this.props.dispatch(setSideCardListFlag(e.target.className));
-  }
   componentWillMount() {
     if (isEmpty(this.props.signal)) {
       if (this.props.match.url.indexOf("apps-robo") != -1) {
         this.props.dispatch(getRoboDataset(this.props.match.params.slug));
       } else if (this.props.match.url.indexOf("apps-stock") != -1) {
         this.props.dispatch(getStockAnalysis(this.props.match.params.slug));
-      }else if (this.props.match.url.indexOf("apps-regression") != -1) {
-        this.props.dispatch(getAppsScoreSummary(this.props.match.params.slug));
       }
       else {
         this.props.dispatch(getSignalAnalysis(getUserDetailsOrRestart.get().userToken, this.props.match.params.slug));
@@ -78,17 +68,9 @@ export class OverViewPage extends React.Component {
   componentWillUnmount = () => {            
     clearTimeout(this.setTime);    
     this.props.dispatch(setLoaderFlagAction(true))  
-  };
-  toggleSideList() {
-    $('.row-offcanvas').toggleClass('active');
-    if ($('.row-offcanvas-left').hasClass('active')) {
-      $('.sdbar_switch i').removeClass('sw_on');
-      $('.sdbar_switch i').addClass('sw_off');
-    } else {
-      $('.sdbar_switch i').addClass('sw_on');
-      $('.sdbar_switch i').removeClass('sw_off');
-    };
-  }
+}; 
+
+
   prevNext(path) {
     let currentSuffix = path.location.pathname;
     var delimiter = "/";
@@ -104,16 +86,14 @@ export class OverViewPage extends React.Component {
     this.setState({showStockSenceDataPreview:!this.state.showStockSenceDataPreview})
   }
   closeDocumentMode() {
-    this.props.dispatch(hideDataPreview());
-    if(this.urlPrefix.indexOf("apps-regression") != -1)
-      this.props.history.push("/apps-regression/scores")
-    else if(this.props.match.url.indexOf("apps-robo") != -1)
+    this.props.dispatch(hideDataPreview()); 
+    if(this.props.match.url.indexOf("apps-robo") != -1)
       this.props.history.push("/apps-robo")
     else if (this.props.match.url.indexOf("apps-stock") != -1){
       this.props.dispatch(uploadStockAnalysisFlag(false))
       this.props.history.push("/apps-stock-advisor")
     }else
-      this.props.history.push("/signals");
+      window.location.pathname = "/signals"
   }
   gotoScoreData(){
     this.props.dispatch(getScoreSummaryInCSV(store.getState().apps.scoreSlug))
@@ -167,17 +147,14 @@ export class OverViewPage extends React.Component {
       } else {
         let regression_app=false;
         let stock_sense_app = false;
-        if(that.urlPrefix.indexOf("apps-regression") != -1)
-          regression_app=true;
         if(that.urlPrefix.indexOf("/apps-stock-advisor") != -1)
           stock_sense_app=true;
-        if ((regression_app || stock_sense_app) && !this.props.match.params.l1) {
+        if ((stock_sense_app) && !this.props.match.params.l1) {
           var url=that.urlPrefix+"/"+this.props.match.params.slug+"/"+this.props.signal.listOfNodes[0].slug
          return(<Redirect to ={url}/>)
         }
         
         let urlSplit = this.props.location.pathname.split("/");
-        let selectedSignal = storyName;
         let tabList = null;
         let varList = null;
         let cardList = null;
@@ -247,6 +224,7 @@ export class OverViewPage extends React.Component {
         let selectedNode = null;
         let selectedNode_slug = null;
         let selectedURL = ""
+        let hideListOfAnalysis = true;
         if (Object.keys(params).length == 3) {
           selectedNode_slug = params.l1;
           selectedURL = that.urlPrefix + "/" + params.slug + "/" + params.l1;
@@ -257,7 +235,7 @@ export class OverViewPage extends React.Component {
        
         selectedNode = fetchNodeFromTree(selectedNode_slug, this.props.signal);
         if(selectedNode.listOfCards.length!=1) {
-          $("#sticky-container").removeClass("hidden");
+          hideListOfAnalysis = false;
           cardList = selectedNode.listOfCards.map((card, i) => {
             let selectedLink = selectedURL + "/" + card.slug;
             return (
@@ -273,8 +251,6 @@ export class OverViewPage extends React.Component {
           documentModeLink = "/signaldocumentMode/" + this.props.match.params.slug;
         } else if (that.urlPrefix.indexOf("stock") != -1) {
           documentModeLink = "/apps-stock-document-mode/"+this.props.match.params.slug;
-        } else if (regression_app) {
-          documentModeLink = "/apps-regression-score-document/"+this.props.match.params.slug;
         } else {
           documentModeLink = "/apps-robo-document-mode/" + this.props.match.params.slug;
         }
@@ -289,8 +265,6 @@ export class OverViewPage extends React.Component {
             if (this.props.signal.listOfCards[0].slug) {
               prevURL = that.urlPrefix + "/" + this.props.match.params.slug;
             }
-          }else if (regression_app) {
-            prevURL="/apps-regression/scores"
           }else {
             prevURL = that.urlPrefix;
           }
@@ -321,11 +295,6 @@ export class OverViewPage extends React.Component {
         if(l1Name=="Influencers")
           classname=".sb_navigation #subTab i.mAd_icons.ic_measure ~ span"
         subTreeSetting(urlSplit.length, 6, that.props.match.params.l2,classname); // setting of subtree and active classes
-
-        if(regression_app){
-          var scoreDownloadURL=API+'/api/get_score_data_and_return_top_n/?url='+store.getState().apps.scoreSlug+'&download_csv=true&count=100'
-          var scoreDataLink = "/apps/regression-app-6u8ybu4vdr/analyst/scores/"+store.getState().apps.scoreSlug+"/dataPreview";
-        }
         return (
           <div>
             {this.state.showStockSenceDataPreview?
@@ -337,7 +306,7 @@ export class OverViewPage extends React.Component {
                   <h3 className="xs-mt-0 xs-mb-0"> {storyName}
                     <div className="btn-toolbar pull-right">
                       <div className="btn-group summaryIcons">
-                        <div className="btn btn-default sticky-container hidden-xs hidden" id="sticky-container">
+                        <div className={"btn btn-default sticky-container hidden-xs " +(hideListOfAnalysis?"hidden":"")} id="sticky-container">
                           <button type="button" data-toggle="dropdown" class="btn btn-primary btn-round btn-xs" title="List of Analysis">
                             <i class="fa fa-list-ul"></i>
                           </button>
@@ -345,11 +314,10 @@ export class OverViewPage extends React.Component {
                             {cardList}
                           </ul>
                         </div>
-                        {/*<button type="button" className="btn btn-default" disabled="true" title="Card mode"><i className="fa fa-print"></i></button>*/}
-                        {(this.props.match.url.indexOf('/apps-stock-advisor') >= 0) ?
+                        {(this.props.match.url.indexOf('/apps-stock-advisor') >= 0) &&
                           <button type="button" className="btn btn-default" onClick={this.showStockSenceDataPreview.bind(this)} title="Show Data Preview">
                             <i class="zmdi zmdi-hc-lg zmdi-grid"></i>
-                        </button>:""}
+                        </button>}
                         <button type="button" className="btn btn-default" disabled="true" title="Card mode">
                           <i class="zmdi zmdi-hc-lg zmdi-view-carousel"></i>
                         </button>
@@ -361,11 +329,9 @@ export class OverViewPage extends React.Component {
                           }} title="Document mode">
                           <i class="zmdi zmdi-hc-lg zmdi-view-web"></i>
                         </Link>
-                        {/*<Link className="continue" to={that.urlPrefix}>*/}
                         <button type="button" className="btn btn-default" onClick={this.closeDocumentMode.bind(this)}>
                           <i class="zmdi zmdi-hc-lg zmdi-close"></i>
                         </button>
-                        {/*</Link>*/}
                       </div>
                     </div>
                   </h3>
@@ -410,12 +376,6 @@ export class OverViewPage extends React.Component {
                               }}>
                                 <span className="fa fa-chevron-right"></span>
                               </Link>
-                              <div className="col-md-12 text-right">
-                              {(regression_app)?<div>
-                                  <Link to={scoreDataLink} onClick={this.gotoScoreData.bind(this)} className="btn btn-primary xs-pr-10">View Scored Data</Link>
-                                  <a  href={scoreDownloadURL} id="download" className="btn btn-primary" download>Download Score</a>
-                              </div>:""}
-                            </div>
                           </div>
                         </div>
                       </div>

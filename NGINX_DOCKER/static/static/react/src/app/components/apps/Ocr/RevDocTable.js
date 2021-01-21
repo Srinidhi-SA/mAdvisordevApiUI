@@ -19,7 +19,8 @@ import { Modal, Button, } from "react-bootstrap/";
     documentFlag: store.ocr.documentFlag,
     revDocumentFlag:store.ocr.revDocumentFlag,
     reviewerName: store.ocr.selected_reviewer_name,
-    projectName:store.ocr.selected_project_name
+    projectName:store.ocr.selected_project_name,
+    template: store.ocr.filter_rd_template,
   };
 })
 
@@ -84,24 +85,27 @@ export class RevDocTable extends React.Component {
     this.setState({filterVal:mode})
   }
  
-  disableInputs(mode,reset){
-     let  idList=''
-     mode[0]=="C"? idList= ['CEQL','CGTE','CLTE']:idList= ['FEQL','FGTE','FLTE']
-     
-     let disableIds=reset!='reset'?idList.filter(i=>i!=mode):idList
- 
-     if(document.getElementById(mode).value.trim()!='')
-     disableIds.map(i=>$(`#${i}`).attr('disabled', true))
-     else
-     disableIds.map(i=>$(`#${i}`).attr('disabled', false))
-  }
+  disableInputs(mode,reset,filterOn=null){
+    if(reset=="reset"){ //clear entered value and enable all fields on reset(All)
+      var selectedFieldIds = filterOn=='confidence'? ['CEQL','CGTE','CLTE']:['FEQL','FGTE','FLTE'];
+      selectedFieldIds.map(i=>document.getElementById(i).value='')
+      selectedFieldIds.map(i=>$(`#${i}`).attr('disabled', false))
+      
+    }else{ //disable  other two fields on entering value
+      let idList = mode[0]=="C"? ['CEQL','CGTE','CLTE']:['FEQL','FGTE','FLTE'];
+      let disableIds=idList.filter(i=>i!=mode)
+       if(document.getElementById(mode).value.trim()!='')
+       disableIds.map(i=>$(`#${i}`).attr('disabled', true))
+       else
+       disableIds.map(i=>$(`#${i}`).attr('disabled', false))
+    }
+}
 
   filterRevDocrList(filtertBy, filterOn,reset ) {
     var filterByVal=''
     if(reset!='reset'){
       filterByVal = (filterOn==('confidence')||(filterOn=='fields'))?$(`#${this.state.filterVal}`).val().trim()!=''?(this.state.filterVal.slice(1,4)+$(`#${this.state.filterVal}`).val().trim()):"":filtertBy;
     }
-    // filterByVal = (filterOn==('confidence')||(filterOn=='fields'))?(this.state.filterVal.slice(1,4)+$(`#${this.state.filterVal}`).val()):filtertBy
     switch (filterOn) {
       case 'status':
       this.props.dispatch(ocrRdFilterStatus(filterByVal))
@@ -118,8 +122,7 @@ export class RevDocTable extends React.Component {
     }
     this.props.dispatch(getRevrDocsList())
     if(reset=='reset'){
-      document.getElementById(this.state.filterVal).value=''
-      this.disableInputs(this.state.filterVal,'reset')
+      this.disableInputs(this.state.filterVal,'reset',filterOn)
     }
   }
 
@@ -149,9 +152,8 @@ export class RevDocTable extends React.Component {
  }
 
  deleteDocument = () => {
-   let task = this.state.deleteTask;
-   let taskId = task.filter(i=>i.assigned_user== getUserDetailsOrRestart.get().userName)[0].id;
-  return fetch(API + '/ocrflow/review/' + taskId + '/', {
+  let task = this.state.deleteTask[0].id;
+  return fetch(API + '/ocrflow/review/' + task + '/', {
      method: 'put',
      headers: this.getHeader(getUserDetailsOrRestart.get().userToken),
      body: JSON.stringify({ deleted: true ,"image_slug": this.state.deleteDocSlug})
@@ -225,12 +227,12 @@ export class RevDocTable extends React.Component {
       )
         : (<tr><td className='text-center' colSpan={9}>"No data found for your selection"</td></tr>)
       )
-        : (<img id="loading" style={{ position: 'relative', left: '600px' }} src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
-    )
+        : (<tr><td colSpan={8}><img src={STATIC_URL + "assets/images/Preloader_2.gif"} /></td></tr>)
+        )
     let templateOptions= (this.props.OcrRevwrDocsList!=""?
     this.props.OcrRevwrDocsList.values.map((item,index)=>{
       return(
-          <li key={index}><a class="cursor" onClick={this.filterRevDocrList.bind(this,item,'template')} name={item} data-toggle="modal" data-target="#modal_equal"> {item}</a></li>
+          <li key={index}><a className={ this.props.template == item ? "active cursor" : "cursor" } onClick={this.filterRevDocrList.bind(this,item,'template')} name={item} data-toggle="modal" data-target="#modal_equal"> {item}</a></li>
       )}):
       "")
     return (
@@ -255,7 +257,6 @@ export class RevDocTable extends React.Component {
             <div className="table-responsive noSwipe xs-pb-10" style={{minHeight:250,background:'#fff',overflow:'inherit'}}>
           {/* if total_data_count_wf <=1 then only render table else show panel box */}
             {this.props.OcrRevwrDocsList != '' ? 
-            // this.props.OcrRevwrDocsList.total_data_count>= 1 ?
              (
             <Scrollbars style={{ width: 'calc(100% - 1px)', height:390 }}>
             <table id="reviewDocumentTable" className="tablesorter table table-condensed table-hover cst_table ocrTable">
@@ -263,7 +264,7 @@ export class RevDocTable extends React.Component {
               <tr>
                 <th>NAME</th>
                 <th class="dropdown" >
-                  <a href="#" data-toggle="dropdown" disable class="dropdown-toggle cursor" title="Status" aria-expanded="true">
+                  <a href="#" data-toggle="dropdown"  class="dropdown-toggle cursor" title="Status" aria-expanded="true">
                     <span>STATUS</span> <b class="caret"></b>
                   </a>
                   <ul class="dropdown-menu scrollable-menu">
@@ -278,9 +279,9 @@ export class RevDocTable extends React.Component {
                           <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Template" aria-expanded="true">
                             <span>TEMPLATE</span> <b class="caret"></b>
                           </a>
-                          <ul class="dropdown-menu scrollable-menu dropdownScroll" style={{minWidth:'130px'}}>
+                          <ul class="dropdown-menu scrollable-menu dropdownScroll template" style={{minWidth:'130px', paddingLeft:0}}>
                           <Scrollbars className="templateScroll" style={{ height: 160,overflowX:'hidden' }} >
-                            <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, '', 'template')} name='all'>All</a></li>
+                            <li><a className={ this.props.template == "" ? "active cursor" : "cursor" } onClick={this.filterRevDocrList.bind(this, '', 'template')} name='all'>All</a></li>
                             {templateOptions}
                              </Scrollbars>
                           </ul>
@@ -300,17 +301,6 @@ export class RevDocTable extends React.Component {
                             <button className="btn btn-primary filterCheckBtn"  onClick={this.filterRevDocrList.bind(this, '', 'fields','')}><i class="fa fa-check"></i></button>
                          </ul>
                         </th>
-                {/* <th class="dropdown" >
-                  <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Fields" aria-expanded="true">
-                    <span>Fields</span> <b class="caret"></b>
-                  </a>
-                  <ul class="dropdown-menu scrollable-menu">
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, '', 'fields')} name="all" data-toggle="modal" data-target="#modal_equal">All</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 3, 'fields')} name="delete" data-toggle="modal" data-target="#modal_equal">Equal</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 3, 'fields')} name="rename" data-toggle="modal" data-target="#modal_equal">Greater than</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 3, 'fields')} name="replace" data-toggle="modal" data-target="#modal_equal">Less than</a></li>
-                  </ul>
-                </th> */}
                        <th class="dropdown" >
                           <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Confidence Level" aria-expanded="true">
                             <span>ACCURACY</span> <b class="caret"></b>
@@ -326,17 +316,6 @@ export class RevDocTable extends React.Component {
                             <button className="btn btn-primary filterCheckBtn" onClick={this.filterRevDocrList.bind(this, '', 'confidence','')}><i class="fa fa-check"></i></button>
                           </ul>
                         </th>
-                {/* <th class="dropdown" >
-                  <a href="#" data-toggle="dropdown" class="dropdown-toggle cursor" title="Confidence Level" aria-expanded="true">
-                    <span>ACCURACY</span> <b class="caret"></b>
-                  </a>
-                  <ul class="dropdown-menu scrollable-menu">
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, '', 'confidence')} name="all" data-toggle="modal" data-target="#modal_equal">All</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 'E', 'confidence')} name="equal" data-toggle="modal" data-target="#modal_equal">Equal</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 'G', 'confidence')} name="greater" data-toggle="modal" data-target="#modal_equal">Greater than</a></li>
-                    <li><a class="cursor" onClick={this.filterRevDocrList.bind(this, 'L', 'confidence')} name="less" data-toggle="modal" data-target="#modal_equal">Less than</a></li>
-                  </ul>
-                </th> */}
                 <th>Created</th>
                 <th>Modified</th>
                 <th>Modified By</th>
@@ -348,8 +327,6 @@ export class RevDocTable extends React.Component {
              </tbody>
             </table>
             </Scrollbars>)
-          //   :
-          //  (<div><br/><div className="text-center text-muted xs-mt-50"><h2>No results found..</h2></div></div>)
             : (<img id="loading" style= {{paddingTop:0}} src={STATIC_URL + "assets/images/Preloader_2.gif"} />)
           }
           {paginationTag}
@@ -381,5 +358,6 @@ export class RevDocTable extends React.Component {
   }
   componentWillUnmount = () => {
     this.props.dispatch(clearImageDetails());
+    this.props.dispatch(ocrRdFiltertemplate(""));
   }
 }
