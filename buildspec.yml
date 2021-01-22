@@ -13,8 +13,6 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - sh copyHadoopImage.sh
-      - sh copyApiFolder.sh
       - cd NGINX_DOCKER
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:latest 

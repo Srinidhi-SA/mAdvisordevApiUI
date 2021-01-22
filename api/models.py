@@ -432,6 +432,7 @@ class Dataset(models.Model):
                 return "file://{}".format(self.input_file.path)
             elif type == 'hdfs':
                 file_size = os.stat(self.input_file.path).st_size
+                print("------------------------Uploading file---------------------")
                 # if file_size < 128000000:
                 #     if settings.USE_HTTPS:
                 #         protocol = 'https'
