@@ -432,24 +432,24 @@ class Dataset(models.Model):
                 return "file://{}".format(self.input_file.path)
             elif type == 'hdfs':
                 file_size = os.stat(self.input_file.path).st_size
-                if file_size < 128000000:
-                    if settings.USE_HTTPS:
-                        protocol = 'https'
-                    else:
-                        protocol = 'http'
-                    dir_path = "{0}://{1}".format(protocol, THIS_SERVER_DETAILS.get('host'))
+                # if file_size < 128000000:
+                #     if settings.USE_HTTPS:
+                #         protocol = 'https'
+                #     else:
+                #         protocol = 'http'
+                #     dir_path = "{0}://{1}".format(protocol, THIS_SERVER_DETAILS.get('host'))
 
-                    path = str(self.input_file)
-                    if '/home/' in path:
-                        file_name=path.split("/config")[-1]
-                    else:
-                        file_name = os.path.join('/media/', str(self.input_file))
-                else:
-                    dir_path = "hdfs://{}:{}".format(
-                        settings.HDFS.get("host"),
-                        settings.HDFS.get("hdfs_port")
-                    )
-                    file_name = self.get_hdfs_relative_file_path()
+                #     path = str(self.input_file)
+                #     if '/home/' in path:
+                #         file_name=path.split("/config")[-1]
+                #     else:
+                #         file_name = os.path.join('/media/', str(self.input_file))
+                #else:
+                dir_path = "hdfs://{}:{}".format(
+                    settings.HDFS.get("host"),
+                    settings.HDFS.get("hdfs_port")
+                )
+                file_name = self.get_hdfs_relative_file_path()
                 return dir_path + file_name
 
             elif type == 'fake':
