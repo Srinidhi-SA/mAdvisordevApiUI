@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+ENV TZ=US
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update \
   && apt-get install -y python3-pip python3-dev \
   && cd /usr/local/bin \
@@ -49,6 +51,7 @@ EXPOSE 8000 9015 8080 80
 RUN pip3 install fabric3 
 #USER marlabs
 RUN apt-get update
+
 RUN apt-get install python3-tk libsm6 libxext6 libxrender-dev libgl1-mesa-glx -y
 COPY migrate.sh /home/mAdvisor/mAdvisor-api/
 RUN chmod +x /home/mAdvisor/mAdvisor-api/migrate.sh
