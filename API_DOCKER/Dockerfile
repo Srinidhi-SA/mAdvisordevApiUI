@@ -1,10 +1,10 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.0
 
 RUN apt-get update \
   && apt-get install -y python3-pip python3-dev \
   && cd /usr/local/bin \
   && ln -s /usr/bin/python3 python \
-  && pip install --upgrade pip
+  && pip3 install --upgrade pip
 
 RUN groupadd -r marlabs && useradd -r -s /bin/false -g marlabs marlabs
 
@@ -26,7 +26,7 @@ RUN apt-get install virtualenv enchant vim telnet net-tools iputils-ping -y
 RUN apt-get install libmysqlclient-dev -y && apt install postgresql-server-dev-all -y 
 #RUN . myenv/bin/activate 
 #RUN pip3 install -U setuptools
-RUN pip install pyenchant && pip install -r requirements.txt
+RUN pip3 install pyenchant && pip3 install -r requirements.txt
 
 RUN apt-get install curl -y
 
@@ -46,7 +46,7 @@ RUN chown -R marlabs:marlabs /home/mAdvisor/
 
 WORKDIR /home/mAdvisor/mAdvisor-api/
 EXPOSE 8000 9015 8080 80
-RUN pip install fabric3 
+RUN pip3 install fabric3 
 #USER marlabs
 RUN apt-get update
 RUN apt-get install python3-tk libsm6 libxext6 libxrender-dev libgl1-mesa-glx -y
