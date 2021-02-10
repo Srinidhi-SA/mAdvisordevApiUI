@@ -81,7 +81,7 @@ export default function reducer(state = {
   iRFlag : true,
   sRFlag : true,
   tabActive:'backlog',
-  imageTaskId: "",
+  docTaskId: [],
   projectTabLoaderFlag:false,
   dashboardMetrics: {},
   is_closed: "",
@@ -103,6 +103,7 @@ export default function reducer(state = {
   pdfSize:1,
   pdfNumber:1,
   pdfDoc: false,
+  pdfSlug: "",
 
 }, action) {
   switch (action.type) {
@@ -280,7 +281,6 @@ export default function reducer(state = {
     break;
     case "SAVE_IMAGE_DETAILS":
       {
-        let taskId = action.data.tasks === null ? "" : action.data.tasks.id;
         let close= action.data.tasks === null ? "" : action.data.tasks.is_closed;
         let templateVal = action.data.values === undefined || action.data.values === null ? "" : action.data.values;
         let classificationVal = action.data.classification === undefined || action.data.classification === null  ? "" : action.data.classification;
@@ -290,7 +290,6 @@ export default function reducer(state = {
           ocrImgPath: action.data.generated_image,
           customImgPath: action.data.generated_image,
           imageSlug: action.data.slug,
-          imageTaskId: taskId,
           is_closed: close,
           template: templateVal,
           classification: classificationVal,
@@ -311,6 +310,21 @@ export default function reducer(state = {
         }
         }
       break;
+      case "SAVE_PDF_SLUG":
+        {
+          return{
+            ...state,
+            pdfSlug: action.data,
+          }
+        }
+        case "TASK_ID":
+          {
+          let taskId = action.data.task_ids === null ? [] : action.data.task_ids;
+            return{
+            ...state,
+            docTaskId: taskId,
+            }
+          }
       case "CLOSE_FLAG":
         {
           return{
@@ -334,7 +348,7 @@ export default function reducer(state = {
             originalImgPath: "" ,
             ocrImgPath: "",
             imageSlug: "",
-            imageTaskId: "",
+            docTaskId: [],
             is_closed:"",
             template: [],
             classification: "",
@@ -371,7 +385,7 @@ export default function reducer(state = {
       {
         return {
           ...state,
-          filter_status: action.status,
+          filter_status: action.value,
         }
       }
     break;
@@ -379,7 +393,7 @@ export default function reducer(state = {
       {
         return {
           ...state,
-          filter_confidence: action.confidence,
+          filter_confidence: action.value,
         }
       }
     break;
@@ -387,7 +401,7 @@ export default function reducer(state = {
       {
         return {
           ...state,
-          filter_assignee: action.assignee
+          filter_assignee: action.value
         }
       }
     break;
@@ -396,7 +410,7 @@ export default function reducer(state = {
     {
       return {
         ...state,
-        filter_template: action.template
+        filter_template: action.value
       }
     }
   break;
@@ -404,56 +418,67 @@ export default function reducer(state = {
       {
         return {
           ...state,
-          filter_fields: action.fields
+          filter_fields: action.value
         }
       }
     break;
+    
+    case "RESET_OCR_TABLE_FILTERS":
+    {
+      return {
+        ...state,
+        filter_status:'',
+        filter_confidence: '',
+        filter_assignee:'',
+        filter_fields:'',
+        filter_template:''
+      }
+    }
+  break;
     // filter for reviewers document table
-    case "FILTER_RD_BY_STATUS":
-      {
-        return {
-          ...state,
-          filter_rd_status: action.status,
-        }
+    case "RESET_RD_FILTER_SEARCH":
+    {
+      return {
+        ...state,
+        filter_rd_status: '',
+        filter_rd_confidence:'',
+        filter_rd_fields:'',
+        filter_rd_template:'',
+        search_project_in_revtable:''
       }
-    break;
-    case "FILTER_RD_BY_CONFIDENCE":
-      {
-        return {
-          ...state,
-          filter_rd_confidence: action.confidence,
+    }
+  break;
+  case "UPDATE_FILTER_RD_DETAILS":
+   {
+        if(action.filterOn=="status"){
+          return {
+            ...state,
+            filter_rd_status: action.value,
+          }
+        }else if(action.filterOn=='confidence'){
+          return {
+            ...state,
+            filter_rd_confidence: action.value,
+          }
+        }else if(action.filterOn=='fields'){
+          return {
+            ...state,
+            filter_rd_fields: action.value
+          }
         }
-      }
-    break;
-    case "FILTER_RD_BY_FIELDS":
-      {
-        return {
-          ...state,
-          filter_rd_fields: action.fields
+        else if(action.filterOn=='template'){
+          return {
+            ...state,
+            filter_rd_template: action.value
+          }
         }
-      }
-    break;
-    case "FILTER_RD_BY_TEMPLATE":
-      {
-        return {
-          ...state,
-          filter_rd_template: action.template
-        }
-      }
+    }
     break;
     case "FILTER_REV_BY_ACCURACY":
     {
       return {
         ...state,
         filter_rev_accuracy: action.accuracy,
-      }
-    }
-  break;
-  case "FILTER_REV_BY_TIME":
-    {
-      return {
-        ...state,
-        filter_rev_time: action.time,
       }
     }
   break; 
