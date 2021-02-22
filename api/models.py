@@ -427,7 +427,7 @@ class Dataset(models.Model):
     def get_input_file(self):
 
         if self.datasource_type in ['file', 'fileUpload']:
-            console.log("File uploading to Container")
+            console.log("File uploading ...............")
             type = self.file_remote
             if type == 'emr_file':
                 return "file://{}".format(self.input_file.path)
