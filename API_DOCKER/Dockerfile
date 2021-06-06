@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM 210201387539.dkr.ecr.us-east-2.amazonaws.com/ubuntu-docker-image:latest
 
 ENV TZ=US
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
