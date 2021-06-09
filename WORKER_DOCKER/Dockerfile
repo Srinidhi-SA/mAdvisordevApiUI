@@ -25,7 +25,7 @@ RUN apt-get install virtualenv enchant vim telnet net-tools iputils-ping -y
 #RUN . myenv/bin/activate &&
 RUN apt-get install libmysqlclient-dev -y && apt install postgresql-server-dev-all -y
 #RUN . myenv/bin/activate &&
-RUN pip3 install -U setuptools
+#RUN pip3 install -U setuptools
 RUN pip3 install pyenchant && pip3 install -r requirements.txt
 
 RUN apt-get install curl -y
