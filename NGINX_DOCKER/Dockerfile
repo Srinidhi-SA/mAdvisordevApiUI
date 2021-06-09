@@ -1,6 +1,6 @@
 # Nginx Dockerfile
 # Pull base image.
-FROM 210201387539.dkr.ecr.us-east-2.amazonaws.com/nginx-docker-image:latest
+FROM docker push 115502491259.dkr.ecr.us-west-1.amazonaws.com/nginx:latest:latest
 
 #RUN groupadd -r marlabs && useradd -r -s /bin/false -g marlabs marlabs
 

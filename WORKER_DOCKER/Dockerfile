@@ -1,4 +1,4 @@
-FROM 210201387539.dkr.ecr.us-east-2.amazonaws.com/ubuntu-docker-image:latest
+FROM 115502491259.dkr.ecr.us-west-1.amazonaws.com/ubuntu:latest
 
 RUN apt-get update \
   && apt-get install -y python3-pip python3-dev \
