@@ -28,8 +28,7 @@ RUN apt-get install virtualenv enchant vim telnet net-tools iputils-ping -y
 RUN apt-get install libmysqlclient-dev -y && apt install postgresql-server-dev-all -y 
 #RUN . myenv/bin/activate 
 #RUN pip3 install -U setuptools
-RUN pip3 install pyenchant && pip3 install -r requirements.txt
-
+RUN pip3 install pyenchant && pip3 install -r requirements.txt && pip install --no-cache-dir torch==1.7.0
 RUN apt-get install curl -y
 
 #COPY * /home/mAdvisor/madvisor-api-temp/
