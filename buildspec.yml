@@ -16,7 +16,6 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - sh copyApiFolder.sh 
       - sh Worker.sh
       - cd NGINX_DOCKER
       - docker build -t $REPOSITORY_URI_NGINX:latest .

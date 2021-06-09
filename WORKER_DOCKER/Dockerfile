@@ -1,5 +1,7 @@
 FROM 115502491259.dkr.ecr.us-west-1.amazonaws.com/ubuntu:latest
 
+ENV TZ=US
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update \
   && apt-get install -y python3-pip python3-dev \
   && cd /usr/local/bin \
