@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM 210201387539.dkr.ecr.us-east-2.amazonaws.com/ubuntu-docker-image:latest
 
 RUN apt-get update \
   && apt-get install -y python3-pip python3-dev \
